@@ -63,15 +63,21 @@ function collide(ball, maze) {
   ball.y = Math.min(maze.h - R, Math.max(R, ball.y));
 }
 
-export function checkEvents(ball, maze, collected) {
+export function checkEvents(ball, maze, collected, collectedCoins) {
   for (let i = 0; i < maze.stars.length; i++) {
     if (collected.has(i)) continue;
     const s = maze.stars[i];
     if (Math.hypot(ball.x - s.x, ball.y - s.y) < P.ballR + P.starR * 0.6) return { type: 'star', i };
   }
+  if (maze.coins && collectedCoins) {
+    for (let i = 0; i < maze.coins.length; i++) {
+      if (collectedCoins.has(i)) continue;
+      const c = maze.coins[i];
+      if (Math.hypot(ball.x - c.x, ball.y - c.y) < P.ballR + P.starR * 0.6) return { type: 'coin', i };
+    }
+  }
   for (let i = 0; i < maze.traps.length; i++) {
     const t = maze.traps[i];
-    // Topun merkezi deliğin üstüne geldiyse düşer
     if (Math.hypot(ball.x - t.x, ball.y - t.y) < t.r) return { type: 'trap', i };
   }
   if (Math.hypot(ball.x - maze.goal.x, ball.y - maze.goal.y) < P.finishR) return { type: 'finish' };

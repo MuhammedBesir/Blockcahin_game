@@ -2,7 +2,7 @@ import { GAME, PHYSICS, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, fetchPlayerStats, isBanned } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, fetchPlayerStats, fetchWallet, isBanned } from './net.js';
 import { createSoundKit } from './sound.js';
 import { createParticleSystem } from './particles.js';
 
@@ -177,14 +177,15 @@ function startGame() {
   if (S.banned) return showBanned();
   S.plays++;
   S.seed = (Math.random() * 4294967296) >>> 0;
-  S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops });
+  S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins });
   S.ball = createBall(S.maze);
-  S.collected = new Set(); S.falls = 0; S.trail = []; S.falling = null; S.respawnAt = null; S.popFx = null;
+  S.collected = new Set(); S.collectedCoins = new Set(); S.coinTotal = 0; S.coinCounts = { btc: 0, eth: 0, alt: 0 }; S.falls = 0;
+  S.trail = []; S.falling = null; S.respawnAt = null; S.popFx = null; S.coinFx = null;
   S.particles = createParticleSystem();
   S.finished = false; S.playing = false; S.raw = 0;
   S.samples = [];
   S.countdownEnd = performance.now() + GAME.countdownSeconds * 1000;
-  updateStarsHud(); updateFallsHud(); updateBestHud();
+  updateStarsHud(); updateFallsHud(); updateBestHud(); updateCoinHud();
   $('#timer').textContent = fmt(0);
   $('#countdown').hidden = false;
   show('s-game');
@@ -222,7 +223,8 @@ function timeUp() {
   send(meCh, 'out', { r: S.plays });
   if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
   const pct = Math.round(S.maze.progressAt(S.ball.x, S.ball.y) * 100);
-  loadBoard().then(({ st, top }) => showResults({ timeout: true, pct, stars: S.collected.size, falls: S.falls, st, top }));
+  const coinTotal = S.coinTotal;
+  loadBoard().then(({ st, top }) => showResults({ timeout: true, pct, stars: S.collected.size, falls: S.falls, coins: coinTotal, st, top }));
 }
 
 function finish(now) {
@@ -232,7 +234,8 @@ function finish(now) {
   S.raw = Math.round(now - S.startT);
   const stars = S.collected.size, falls = S.falls, raw = S.raw;
   const net = Math.max(0, raw - stars * GAME.starBonusMs);
-  send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, stars, falls });
+  const coinTotal = S.coinTotal, coinCounts = { ...S.coinCounts };
+  send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, stars, falls, coins: coinTotal });
   snd.finish(); if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
   $('#finish-chip').textContent = `OYUN ${S.plays} · BİTİŞ`;
   $('#finish-net').textContent = fmt(net);
@@ -241,12 +244,14 @@ function finish(now) {
     : `${fmtSec(raw)} sn · yıldız bonusu yok`;
   renderStars($('#finish-stars'), stars, 22, false);
   $('#finish-stars-sub').textContent = `${stars}/${GAME.stars} yıldız`;
+  $('#finish-coins').textContent = coinTotal;
+  $('#finish-coins-sub').textContent = `coin toplandı`;
   $('#finish-rank').textContent = '–';
   $('#finish-rank-sub').textContent = 'genel sıra hesaplanıyor';
   S.finishShownAt = performance.now();
   show('s-finish');
   startConfetti();
-  saveAndShow({ raw, net, stars, falls });
+  saveAndShow({ raw, net, stars, falls, coins: coinTotal, coinCounts });
 }
 
 // ---------- Skor / liderlik ----------
@@ -269,7 +274,7 @@ async function saveAndShow(r) {
   if (r.raw < GAME.minPlausibleMs) { saved = false; tooFast = true; }
   else {
     try {
-      await saveScores([{ pid, name, net_ms: r.net, raw_ms: r.raw, stars: r.stars, falls: Math.min(r.falls, 999), room, round: S.plays, seed: S.seed }]);
+      await saveScores([{ pid, name, net_ms: r.net, raw_ms: r.raw, stars: r.stars, falls: Math.min(r.falls, 999), coins: r.coins || 0, coins_btc: r.coinCounts?.btc || 0, coins_eth: r.coinCounts?.eth || 0, coins_alt: r.coinCounts?.alt || 0, room, round: S.plays, seed: S.seed }]);
     } catch (e) { console.error('Skor kaydedilemedi', e); saved = false; }
   }
   const { st, top } = await loadBoard();
@@ -277,11 +282,11 @@ async function saveAndShow(r) {
     $('#finish-rank').textContent = `${st.rank}.`;
     $('#finish-rank-sub').textContent = `genel sıra · ${st.total} oyuncu`;
   }
-  let stats = null;
-  try { stats = await fetchPlayerStats(pid); } catch { /* istatistik alınamazsa yok say */ }
+  let stats = null, wallet = null;
+  try { [stats, wallet] = await Promise.all([fetchPlayerStats(pid), fetchWallet(pid)]); } catch { /* alınamazsa yok say */ }
   // Bitirdin ekranı en az 3,5 sn görünsün
   const wait = Math.max(0, 3500 - (performance.now() - S.finishShownAt));
-  setTimeout(() => showResults({ ...r, saved, tooFast, prevBest, st, top, stats }), wait);
+  setTimeout(() => showResults({ ...r, saved, tooFast, prevBest, st, top, stats, wallet }), wait);
 }
 
 function showResults(r) {
@@ -312,12 +317,14 @@ function showResults(r) {
       <dt>Ham süre</dt><dd>${fmtSec(r.raw)} sn</dd>
       <dt>Yıldız bonusu (${r.stars} × ${GAME.starBonusMs / 1000} sn)</dt><dd class="bonus">−${fmtSec(r.stars * GAME.starBonusMs)} sn</dd>
       <dt>Düşme</dt><dd>${r.falls} kez</dd>
+      <dt>Coin</dt><dd class="coin-val">${r.coins || 0} 🪙</dd>
       <dt class="total">NET SÜRE</dt><dd class="total">${fmtSec(r.net)}</dd>`;
   } else {
     dl.innerHTML = `
       <dt>İlerleme</dt><dd>%${r.pct}</dd>
       <dt>Yıldız</dt><dd>${r.stars}/${GAME.stars}</dd>
-      <dt>Düşme</dt><dd>${r.falls} kez</dd>`;
+      <dt>Düşme</dt><dd>${r.falls} kez</dd>
+      <dt>Coin</dt><dd class="coin-val">${r.coins || 0} 🪙</dd>`;
   }
   const ol = $('#res-top');
   ol.innerHTML = '';
@@ -331,6 +338,18 @@ function showResults(r) {
     ol.appendChild(li);
   });
   $('#res-top-wrap').hidden = !r.top.length;
+
+  // Cüzdan
+  const walletEl = $('#res-wallet');
+  if (r.wallet && r.wallet.total_coins > 0) {
+    walletEl.hidden = false;
+    $('#wallet-total').textContent = r.wallet.total_coins;
+    $('#wallet-btc').textContent = r.wallet.btc || 0;
+    $('#wallet-eth').textContent = r.wallet.eth || 0;
+    $('#wallet-alt').textContent = r.wallet.alt || 0;
+  } else {
+    walletEl.hidden = true;
+  }
 
   // İstatistikler
   const statsEl = $('#res-stats');
@@ -403,6 +422,7 @@ function renderStars(el, n, size, withCount) {
 }
 function updateStarsHud() { renderStars($('#hud-stars'), S.collected.size, 20, true); }
 function updateFallsHud() { $('#hud-falls').textContent = `${S.falls} düşme`; }
+function updateCoinHud() { $('#hud-coins').textContent = `${S.coinTotal}`; }
 
 function timeAgo(iso) {
   const d = new Date(iso), now = Date.now(), diff = now - d.getTime();
@@ -474,10 +494,16 @@ function frame(now) {
           S.trail.push({ x: S.ball.x, y: S.ball.y }); S.lastTrailT = now;
           if (S.trail.length > 14) S.trail.shift();
         }
-        const ev = checkEvents(S.ball, S.maze, S.collected);
+        const ev = checkEvents(S.ball, S.maze, S.collected, S.collectedCoins);
         if (ev?.type === 'star') {
           S.collected.add(ev.i); S.popFx = { t: now, x: S.maze.stars[ev.i].x, y: S.maze.stars[ev.i].y };
           updateStarsHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(25);
+        } else if (ev?.type === 'coin') {
+          const coin = S.maze.coins[ev.i];
+          const val = GAME.coinValues[coin.type] || 1;
+          S.collectedCoins.add(ev.i); S.coinTotal += val; S.coinCounts[coin.type] = (S.coinCounts[coin.type] || 0) + 1;
+          S.coinFx = { t: now, x: coin.x, y: coin.y, type: coin.type, val };
+          updateCoinHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(35);
         } else if (ev?.type === 'trap') {
           const tr = S.maze.traps[ev.i];
           S.particles.emit('trap', tr.x, tr.y, S.layer.geom.cell);

@@ -19,7 +19,7 @@ const DIRS = [
 ];
 
 export function generateMaze(seed, opts) {
-  const { w, h, stars: nStars, traps: nTraps, loops } = opts;
+  const { w, h, stars: nStars, traps: nTraps, loops, coins: coinCfg } = opts;
   const rnd = mulberry32(seed);
   const idx = (x, y) => y * w + x;
   const walls = new Uint8Array(w * h).fill(N | E | S | W_);
@@ -128,7 +128,34 @@ export function generateMaze(seed, opts) {
     traps.push({ x: (i % w) + 0.5, y: Math.floor(i / w) + 0.5, r: 0.33 }); used.add(i);
   }
 
-  // 6) Duvar segmentleri (çizim + çarpışma). Birleşik yatay/dikey çizgiler.
+  // 6) Coin yerleşimi
+  const coins = [];
+  if (coinCfg) {
+    // BTC: yoldan uzak, zor erişilen çıkmaz hücreler
+    const farDead = shuffle([...Array(w * h).keys()].filter(i =>
+      wallCount(i) >= 2 && !onPath.has(i) && !blocked.has(i) && !used.has(i) && dist[i] > dist[0] * 0.3
+    ));
+    for (const i of farDead) {
+      if (coins.filter(c => c.type === 'btc').length >= (coinCfg.btc || 0)) break;
+      coins.push({ x: (i % w) + 0.5, y: Math.floor(i / w) + 0.5, type: 'btc' }); used.add(i);
+    }
+    // ETH: yol üzerinde ama başlangıç/bitiş civarında değil
+    const midPath = shuffle(path.slice(Math.floor(path.length * 0.25), Math.floor(path.length * 0.75)));
+    for (const [x, y] of midPath) {
+      if (coins.filter(c => c.type === 'eth').length >= (coinCfg.eth || 0)) break;
+      const i = idx(x, y);
+      if (used.has(i) || blocked.has(i)) continue;
+      coins.push({ x: x + 0.5, y: y + 0.5, type: 'eth' }); used.add(i);
+    }
+    // Altcoin: kalan boş hücreler
+    const remaining = shuffle([...Array(w * h).keys()].filter(i => !blocked.has(i) && !used.has(i)));
+    for (const i of remaining) {
+      if (coins.filter(c => c.type === 'alt').length >= (coinCfg.alt || 0)) break;
+      coins.push({ x: (i % w) + 0.5, y: Math.floor(i / w) + 0.5, type: 'alt' }); used.add(i);
+    }
+  }
+
+  // 7) Duvar segmentleri (çizim + çarpışma). Birleşik yatay/dikey çizgiler.
   const segs = [];
   for (let y = 0; y <= h; y++) {
     let run = null;
@@ -156,7 +183,7 @@ export function generateMaze(seed, opts) {
   });
 
   return {
-    w, h, seed, walls, dist, path, stars, traps, segs, buckets,
+    w, h, seed, walls, dist, path, stars, traps, coins, segs, buckets,
     start: { x: 0.5, y: 0.5 },
     goal: { x: goal.x + 0.5, y: goal.y + 0.5 },
     startDist: dist[0],

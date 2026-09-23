@@ -76,6 +76,13 @@ export async function fetchPlayerStats(pid) {
   return data?.[0] || null;
 }
 
+// { total_coins, btc, eth, alt } ya da null
+export async function fetchWallet(pid) {
+  const { data, error } = await sb().rpc('player_wallet', { p_pid: pid });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
 // ---------- Engelleme ----------
 export async function isBanned(pid) {
   const { data, error } = await sb().rpc('is_banned', { p_pid: pid });

@@ -79,7 +79,7 @@
   </div>
   <div class="substats">
     <div class="stars" id="hud-stars" aria-label="Toplanan yıldız"></div>
-    <div class="meta"><span class="falls"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#000" stroke="#4FB8F0" stroke-width="1.5"/></svg><span id="hud-falls">0 düşme</span></span><span id="hud-name"></span></div>
+    <div class="meta"><span class="coin-hud"><span class="coin-icon">🪙</span><span id="hud-coins">0</span></span><span class="falls"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#000" stroke="#4FB8F0" stroke-width="1.5"/></svg><span id="hud-falls">0 düşme</span></span><span id="hud-name"></span></div>
   </div>
   <div class="maze-card" id="maze-card">
     <canvas id="maze-canvas" aria-label="Labirent"></canvas>
@@ -121,6 +121,7 @@
     <div class="finish-cards">
       <div class="rank-card"><div class="n" id="finish-rank">–</div><div id="finish-rank-sub">genel sıra hesaplanıyor</div></div>
       <div class="stars-card"><div class="stars" id="finish-stars"></div><div id="finish-stars-sub">0/5 yıldız</div></div>
+      <div class="coins-card"><div class="n" id="finish-coins">0</div><div id="finish-coins-sub">coin toplandı</div></div>
     </div>
     <div class="spacer"></div>
     <div class="finish-foot">
@@ -138,6 +139,15 @@
     <div class="res-rank"><div class="n" id="res-rank">–</div><div><div class="of" id="res-of"></div><div class="note2" id="res-note"></div></div></div>
     <div class="rule"></div>
     <dl class="breakdown" id="res-breakdown"></dl>
+  </div>
+  <div class="wallet-card" id="res-wallet" hidden>
+    <div class="label">CÜZDANIN</div>
+    <div class="wallet-total"><span class="coin-icon">🪙</span><span id="wallet-total">0</span><span class="wallet-label">toplam coin</span></div>
+    <div class="wallet-breakdown">
+      <div class="wb"><span class="wb-icon btc">₿</span><span id="wallet-btc">0</span></div>
+      <div class="wb"><span class="wb-icon eth">Ξ</span><span id="wallet-eth">0</span></div>
+      <div class="wb"><span class="wb-icon alt">¢</span><span id="wallet-alt">0</span></div>
+    </div>
   </div>
   <div class="stats-card" id="res-stats" hidden>
     <div class="label">SENİN İSTATİSTİKLERİN</div>

@@ -173,6 +173,45 @@ export function drawFrame(ctx, layer, maze, st, now) {
     ctx.restore();
   });
 
+  // Coin'ler
+  if (maze.coins) {
+    maze.coins.forEach((coin, i) => {
+      if (st.collectedCoins?.has(i)) return;
+      const phase = now / 320 + i * 1.7;
+      const bob = Math.sin(phase) * c * 0.025;
+      const cx = g.X(coin.x), cy = g.Y(coin.y) + bob;
+      const r = c * 0.28;
+      ctx.save();
+      if (coin.type === 'btc') {
+        ctx.shadowColor = '#F7931A'; ctx.shadowBlur = c * 0.2;
+        ctx.fillStyle = '#F7931A';
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#FFF'; ctx.font = `bold ${Math.round(r * 1.2)}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('₿', cx, cy + 1);
+      } else if (coin.type === 'eth') {
+        ctx.shadowColor = '#627EEA'; ctx.shadowBlur = c * 0.2;
+        ctx.fillStyle = '#627EEA';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r * 0.8, cy + r * 0.1);
+        ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r * 0.8, cy + r * 0.1); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#FFF'; ctx.lineWidth = Math.max(1, c * 0.025); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - r * 0.55, cy + r * 0.1);
+        ctx.lineTo(cx, cy - r * 0.3); ctx.lineTo(cx + r * 0.55, cy + r * 0.1);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.stroke();
+      } else {
+        ctx.shadowColor = '#2DD4A8'; ctx.shadowBlur = c * 0.15;
+        ctx.fillStyle = '#2DD4A8';
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#FFF'; ctx.font = `bold ${Math.round(r * 0.9)}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('¢', cx, cy + 1);
+      }
+      ctx.restore();
+    });
+  }
+
   // Toplanan yıldız için kısa "+1" patlaması
   if (st.popFx && now - st.popFx.t < 700) {
     const k = (now - st.popFx.t) / 700;
@@ -181,6 +220,18 @@ export function drawFrame(ctx, layer, maze, st, now) {
     ctx.font = `${Math.round(c * 0.4)}px "Rubik Mono One", sans-serif`; ctx.textAlign = 'center';
     ctx.shadowColor = COLORS.gold; ctx.shadowBlur = c * 0.3 * (1 - ease);
     ctx.fillText('−1 sn', g.X(st.popFx.x), g.Y(st.popFx.y) - ease * c * 0.9);
+    ctx.restore();
+  }
+
+  // Coin toplama efekti
+  if (st.coinFx && now - st.coinFx.t < 600) {
+    const k = (now - st.coinFx.t) / 600;
+    const ease = 1 - (1 - k) * (1 - k);
+    const colors = { btc: '#F7931A', eth: '#627EEA', alt: '#2DD4A8' };
+    ctx.save(); ctx.globalAlpha = 1 - ease; ctx.fillStyle = colors[st.coinFx.type] || '#FFC94D';
+    ctx.font = `bold ${Math.round(c * 0.38)}px "Rubik Mono One", sans-serif`; ctx.textAlign = 'center';
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = c * 0.25 * (1 - ease);
+    ctx.fillText(`+${st.coinFx.val}`, g.X(st.coinFx.x), g.Y(st.coinFx.y) - ease * c * 0.9);
     ctx.restore();
   }
 

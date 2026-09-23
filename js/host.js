@@ -18,7 +18,7 @@ const hostId = Math.random().toString(36).slice(2, 10);
 const MAX_CARDS = 24;
 const ACTIVE_MS = 5000;      // bu kadar süre konum gelmezse oyuncu "beklemede" sayılır
 const DONE_SHOW_MS = 12000;  // bitiş kartı bu kadar görünür
-const mazeOpts = { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops };
+const mazeOpts = { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins };
 const IDLE_MAZE = generateMaze(20260923, mazeOpts); // oyunda olmayan kartlarda görünen labirent
 
 const players = new Map(); // ekleme sırası = katılım sırası

@@ -148,6 +148,8 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .rank-card .n { font-family: var(--display); font-size: 40px; line-height: 1; }
 .stars-card { background: var(--deep); border: 2px solid rgba(79,184,240,.4); justify-content: center; }
 .stars-card .star-icon { width: 22px; height: 22px; }
+.coins-card { flex: 1 1 0; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; background: rgba(247,147,26,.15); border: 2px solid rgba(247,147,26,.5); justify-content: center; }
+.coins-card .n { font-family: var(--display); font-size: 36px; line-height: 1; color: #F7931A; }
 .finish-foot { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .finish-foot p { margin: 0; font-size: 15px; color: var(--soft); }
 .finish-foot .bar { height: 8px; border-radius: 999px; background: rgba(79,184,240,.2); overflow: hidden; }
@@ -169,6 +171,7 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .breakdown dt { color: var(--muted); }
 .breakdown dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .breakdown dd.bonus { color: var(--gold); }
+.breakdown dd.coin-val { color: #F7931A; }
 .breakdown dt.total { font-family: var(--pixel); font-size: 13px; color: var(--neon); align-self: center; }
 .breakdown dd.total { font-family: var(--display); font-size: 22px; font-weight: 400; }
 .top5 { display: flex; flex-direction: column; gap: 6px; }
@@ -196,6 +199,22 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .st-row .st-d { font-size: 12px; color: var(--muted); }
 .st-row.gold { border: 1px solid var(--gold); }
 .st-row.gold .st-i { color: var(--gold); }
+
+/* Coin HUD */
+.coin-hud { display: flex; gap: 4px; align-items: center; font-weight: 700; font-size: 14px; color: #F7931A; }
+.coin-icon { font-size: 16px; }
+
+/* Cüzdan kartı */
+.wallet-card { display: flex; flex-direction: column; gap: 10px; background: var(--deep); border: 2px solid rgba(247,147,26,.4); border-radius: 22px; padding: 14px 16px; }
+.wallet-total { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 28px; line-height: 1.1; color: #F7931A; }
+.wallet-total .coin-icon { font-size: 24px; }
+.wallet-total .wallet-label { font-family: var(--body); font-size: 14px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+.wallet-breakdown { display: flex; gap: 12px; }
+.wb { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.25); border-radius: 12px; padding: 6px 12px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.wb-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; flex-shrink: 0; }
+.wb-icon.btc { background: #F7931A; color: #FFF; }
+.wb-icon.eth { background: #627EEA; color: #FFF; }
+.wb-icon.alt { background: #2DD4A8; color: #FFF; }
 
 .next { display: flex; align-items: center; gap: 16px; background: rgba(0,0,0,.35); border-radius: 22px; padding: 12px 16px; }
 .next svg { flex-shrink: 0; }

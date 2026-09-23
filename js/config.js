@@ -28,6 +28,8 @@ export const GAME = {
   loops: 6,               // ek kısa yollar (0 = tek çözümlü labirent)
   starBonusMs: 1000,      // her yıldız net süreden düşer
   minPlausibleMs: 4000,   // bundan hızlı bitiş hile sayılır, reddedilir
+  coins: { btc: 2, eth: 3, alt: 3 },
+  coinValues: { btc: 3, eth: 2, alt: 1 },
 };
 
 export const PHYSICS = {
