@@ -23,10 +23,8 @@ export const GAME = {
   countdownSeconds: 3,    // KATIL/TEKRAR OYNA sonrası geri sayım; son 1 sn'de eğim kalibre edilir
   mazeW: 8,
   mazeH: 11,
-  stars: 5,
   traps: 5,
   loops: 6,               // ek kısa yollar (0 = tek çözümlü labirent)
-  starBonusMs: 1000,      // her yıldız net süreden düşer
   minPlausibleMs: 4000,   // bundan hızlı bitiş hile sayılır, reddedilir
   coins: { btc: 2, eth: 3, alt: 3 },
   coinValues: { btc: 3, eth: 2, alt: 1 },
@@ -41,6 +39,6 @@ export const PHYSICS = {
   friction: 1.1,          // saniyedeki hız kaybı katsayısı
   bounce: 0.35,
   maxSpeed: 7,
-  starR: 0.26,
+  coinR: 0.26,
   finishR: 0.36,
 };

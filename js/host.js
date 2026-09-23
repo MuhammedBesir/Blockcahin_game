@@ -18,7 +18,7 @@ const hostId = Math.random().toString(36).slice(2, 10);
 const MAX_CARDS = 24;
 const ACTIVE_MS = 5000;      // bu kadar süre konum gelmezse oyuncu "beklemede" sayılır
 const DONE_SHOW_MS = 12000;  // bitiş kartı bu kadar görünür
-const mazeOpts = { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins };
+const mazeOpts = { w: GAME.mazeW, h: GAME.mazeH, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins };
 const IDLE_MAZE = generateMaze(20260923, mazeOpts); // oyunda olmayan kartlarda görünen labirent
 
 const players = new Map(); // ekleme sırası = katılım sırası
@@ -76,7 +76,7 @@ function syncGame(pl, m) {
   const r = m?.r;
   if (!Number.isInteger(r) || r === pl.r) return;
   const sd = Number.isInteger(m.sd) ? m.sd >>> 0 : null;
-  Object.assign(pl, { r, seed: sd, maze: sd != null ? generateMaze(sd, mazeOpts) : null, x: null, y: null, dx: null, dy: null, p: 0, fell: false, fellAt: 0, stars: 0, falls: 0, done: false, net: null, doneAt: 0, out: false });
+  Object.assign(pl, { r, seed: sd, maze: sd != null ? generateMaze(sd, mazeOpts) : null, x: null, y: null, dx: null, dy: null, p: 0, fell: false, fellAt: 0, falls: 0, done: false, net: null, doneAt: 0, out: false });
 }
 
 function onPos(pl, m) {
@@ -87,7 +87,6 @@ function onPos(pl, m) {
   const f = !!m.f;
   if (f && !pl.fell) pl.fellAt = performance.now();
   pl.fell = f;
-  pl.stars = clamp(Math.round(+m.s) || 0, 0, GAME.stars);
   pl.lastSeen = performance.now();
 }
 
@@ -95,16 +94,16 @@ function onFin(pl, m) {
   syncGame(pl, m);
   const raw = Math.round(+m.raw);
   if (pl.done || !Number.isFinite(raw) || raw < GAME.minPlausibleMs) return;
-  finishPlayer(pl, raw, clamp(Math.round(+m.stars) || 0, 0, GAME.stars));
+  finishPlayer(pl, raw);
   // Telefon skoru kaydettikten sonra liderlik güncellensin
   setTimeout(loadLeaderboard, 1500);
 }
 
 function onOut(pl, m) { syncGame(pl, m); pl.out = true; pl.lastSeen = 0; }
 
-function finishPlayer(pl, raw, stars) {
-  pl.done = true; pl.stars = stars;
-  pl.net = Math.max(0, raw - stars * GAME.starBonusMs);
+function finishPlayer(pl, raw) {
+  pl.done = true;
+  pl.net = raw;
   pl.p = 100; pl.fell = false; pl.doneAt = performance.now();
   const g = (pl.maze || IDLE_MAZE).goal;
   pl.x = g.x; pl.y = g.y;
@@ -114,7 +113,7 @@ function makePlayer(pid, name, bot) {
   return {
     pid, name, bot, ch: null, joining: false, r: null, seed: null, maze: null, lastSeen: 0,
     x: null, y: null, dx: null, dy: null, p: 0, fell: false, fellAt: 0,
-    stars: 0, falls: 0, done: false, net: null, doneAt: 0, out: false,
+    falls: 0, done: false, net: null, doneAt: 0, out: false,
     card: null, status: '', bf: 0, bSpeed: 0, bWait: 0,
   };
 }
@@ -243,8 +242,7 @@ function stepBots(dt, now) {
     if (pl.fell) { if (now - pl.fellAt > 900) pl.fell = false; continue; }
     pl.bf += pl.bSpeed * dt * (0.6 + Math.random() * 0.8);
     if (Math.random() < 0.025 * dt * 4) { pl.fell = true; pl.fellAt = now; pl.falls++; pl.bf = Math.max(0, pl.bf - 0.2); }
-    if (Math.random() < 0.02 * dt * 4) pl.stars = Math.min(GAME.stars, pl.stars + 1);
-    if (pl.bf >= 1) { finishPlayer(pl, Math.round(now - pl.startedAt), pl.stars); pl.bWait = now + 6000 + Math.random() * 10000; continue; }
+    if (pl.bf >= 1) { finishPlayer(pl, Math.round(now - pl.startedAt)); pl.bWait = now + 6000 + Math.random() * 10000; continue; }
     const pt = pl.maze.pointOnPath(pl.bf);
     pl.x = pt.x; pl.y = pt.y; pl.p = Math.min(99, Math.round(pl.bf * 100));
   }

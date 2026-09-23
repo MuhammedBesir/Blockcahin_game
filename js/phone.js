@@ -177,15 +177,15 @@ function startGame() {
   if (S.banned) return showBanned();
   S.plays++;
   S.seed = (Math.random() * 4294967296) >>> 0;
-  S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins });
+  S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, traps: GAME.traps, loops: GAME.loops, coins: GAME.coins });
   S.ball = createBall(S.maze);
-  S.collected = new Set(); S.collectedCoins = new Set(); S.coinTotal = 0; S.coinCounts = { btc: 0, eth: 0, alt: 0 }; S.falls = 0;
-  S.trail = []; S.falling = null; S.respawnAt = null; S.popFx = null; S.coinFx = null;
+  S.collectedCoins = new Set(); S.coinTotal = 0; S.coinCounts = { btc: 0, eth: 0, alt: 0 }; S.falls = 0;
+  S.trail = []; S.falling = null; S.respawnAt = null; S.coinFx = null;
   S.particles = createParticleSystem();
   S.finished = false; S.playing = false; S.raw = 0;
   S.samples = [];
   S.countdownEnd = performance.now() + GAME.countdownSeconds * 1000;
-  updateStarsHud(); updateFallsHud(); updateBestHud(); updateCoinHud();
+  updateFallsHud(); updateBestHud(); updateCoinHud();
   $('#timer').textContent = fmt(0);
   $('#countdown').hidden = false;
   show('s-game');
@@ -212,7 +212,7 @@ function sendPos() {
     r: S.plays, sd: S.seed,
     x: Math.round(b.x * 100), y: Math.round(b.y * 100),
     p: Math.round(S.maze.progressAt(S.ball.x, S.ball.y) * 100),
-    f: S.falling ? 1 : 0, s: S.collected.size,
+    f: S.falling ? 1 : 0,
   });
 }
 
@@ -224,7 +224,7 @@ function timeUp() {
   if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
   const pct = Math.round(S.maze.progressAt(S.ball.x, S.ball.y) * 100);
   const coinTotal = S.coinTotal;
-  loadBoard().then(({ st, top }) => showResults({ timeout: true, pct, stars: S.collected.size, falls: S.falls, coins: coinTotal, st, top }));
+  loadBoard().then(({ st, top }) => showResults({ timeout: true, pct, falls: S.falls, coins: coinTotal, st, top }));
 }
 
 function finish(now) {
@@ -232,16 +232,14 @@ function finish(now) {
   S.playing = false;
   clearInterval(posTimer);
   S.raw = Math.round(now - S.startT);
-  const stars = S.collected.size, falls = S.falls, raw = S.raw;
-  const net = Math.max(0, raw - stars * GAME.starBonusMs);
+  const falls = S.falls, raw = S.raw;
+  const net = raw;
   const coinTotal = S.coinTotal, coinCounts = { ...S.coinCounts };
-  send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, stars, falls, coins: coinTotal });
+  send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, falls, coins: coinTotal });
   snd.finish(); if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
   $('#finish-chip').textContent = `OYUN ${S.plays} · BİTİŞ`;
   $('#finish-net').textContent = fmt(net);
-  $('#finish-detail').textContent = stars
-    ? `${fmtSec(raw)} sn − ${fmtSec(stars * GAME.starBonusMs)} sn yıldız bonusu`
-    : `${fmtSec(raw)} sn · yıldız bonusu yok`;
+  $('#finish-detail').textContent = `${fmtSec(raw)} sn`;
   $('#finish-coins').textContent = coinTotal;
   $('#finish-coins-sub').textContent = `coin toplandı`;
   $('#finish-rank').textContent = '–';
@@ -249,7 +247,7 @@ function finish(now) {
   S.finishShownAt = performance.now();
   show('s-finish');
   startConfetti();
-  saveAndShow({ raw, net, stars, falls, coins: coinTotal, coinCounts });
+  saveAndShow({ raw, net, falls, coins: coinTotal, coinCounts });
 }
 
 // ---------- Skor / liderlik ----------
@@ -272,7 +270,7 @@ async function saveAndShow(r) {
   if (r.raw < GAME.minPlausibleMs) { saved = false; tooFast = true; }
   else {
     try {
-      await saveScores([{ pid, name, net_ms: r.net, raw_ms: r.raw, stars: r.stars, falls: Math.min(r.falls, 999), coins: r.coins || 0, coins_btc: r.coinCounts?.btc || 0, coins_eth: r.coinCounts?.eth || 0, coins_alt: r.coinCounts?.alt || 0, room, round: S.plays, seed: S.seed }]);
+      await saveScores([{ pid, name, net_ms: r.net, raw_ms: r.raw, stars: 0, falls: Math.min(r.falls, 999), coins: r.coins || 0, coins_btc: r.coinCounts?.btc || 0, coins_eth: r.coinCounts?.eth || 0, coins_alt: r.coinCounts?.alt || 0, room, round: S.plays, seed: S.seed }]);
     } catch (e) { console.error('Skor kaydedilemedi', e); saved = false; }
   }
   const { st, top } = await loadBoard();
@@ -312,15 +310,12 @@ function showResults(r) {
   const dl = $('#res-breakdown');
   if (!r.timeout) {
     dl.innerHTML = `
-      <dt>Ham süre</dt><dd>${fmtSec(r.raw)} sn</dd>
-      <dt>Yıldız bonusu (${r.stars} × ${GAME.starBonusMs / 1000} sn)</dt><dd class="bonus">−${fmtSec(r.stars * GAME.starBonusMs)} sn</dd>
+      <dt>Süre</dt><dd>${fmtSec(r.raw)} sn</dd>
       <dt>Düşme</dt><dd>${r.falls} kez</dd>
-      <dt>Coin</dt><dd class="coin-val">${r.coins || 0} 🪙</dd>
-      <dt class="total">NET SÜRE</dt><dd class="total">${fmtSec(r.net)}</dd>`;
+      <dt>Coin</dt><dd class="coin-val">${r.coins || 0} 🪙</dd>`;
   } else {
     dl.innerHTML = `
       <dt>İlerleme</dt><dd>%${r.pct}</dd>
-      <dt>Yıldız</dt><dd>${r.stars}/${GAME.stars}</dd>
       <dt>Düşme</dt><dd>${r.falls} kez</dd>
       <dt>Coin</dt><dd class="coin-val">${r.coins || 0} 🪙</dd>`;
   }
@@ -410,15 +405,6 @@ function updateBestHud() {
 }
 
 // ---------- HUD ----------
-const starPoly = '<polygon points="12,0 15.06,7.79 23.41,8.29 16.95,13.61 19.05,21.71 12,17.2 4.95,21.71 7.05,13.61 .59,8.29 8.94,7.79"/>';
-const starPolyOff = '<polygon points="12,1.5 14.8,8.4 22,8.8 16.4,13.5 18.2,20.6 12,16.7 5.8,20.6 7.6,13.5 2,8.8 9.2,8.4"/>';
-function renderStars(el, n, size, withCount) {
-  let html = '';
-  for (let i = 0; i < GAME.stars; i++) html += `<svg class="star-icon ${i < n ? 'on' : 'off'}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${i < n ? starPoly : starPolyOff}</svg>`;
-  if (withCount) html += `<span class="count">${n}/${GAME.stars}</span>`;
-  el.innerHTML = html;
-}
-function updateStarsHud() { renderStars($('#hud-stars'), S.collected.size, 20, true); }
 function updateFallsHud() { $('#hud-falls').textContent = `${S.falls} düşme`; }
 function updateCoinHud() { $('#hud-coins').textContent = `${S.coinTotal}`; }
 
@@ -492,11 +478,8 @@ function frame(now) {
           S.trail.push({ x: S.ball.x, y: S.ball.y }); S.lastTrailT = now;
           if (S.trail.length > 14) S.trail.shift();
         }
-        const ev = checkEvents(S.ball, S.maze, S.collected, S.collectedCoins);
-        if (ev?.type === 'star') {
-          S.collected.add(ev.i); S.popFx = { t: now, x: S.maze.stars[ev.i].x, y: S.maze.stars[ev.i].y };
-          updateStarsHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(25);
-        } else if (ev?.type === 'coin') {
+        const ev = checkEvents(S.ball, S.maze, S.collectedCoins);
+        if (ev?.type === 'coin') {
           const coin = S.maze.coins[ev.i];
           const val = GAME.coinValues[coin.type] || 1;
           S.collectedCoins.add(ev.i); S.coinTotal += val; S.coinCounts[coin.type] = (S.coinCounts[coin.type] || 0) + 1;

@@ -29,15 +29,6 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
-function star(ctx, cx, cy, R, r) {
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r : R;
-    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
-  }
-  ctx.closePath();
-}
-
 function checker(ctx, x, y, w, h, n) {
   const s = w / n;
   ctx.fillStyle = COLORS.white; ctx.fillRect(x, y, w, h);
@@ -159,20 +150,6 @@ export function drawFrame(ctx, layer, maze, st, now) {
   for (const t of maze.traps) { ctx.beginPath(); ctx.arc(g.X(t.x), g.Y(t.y), t.r * c + c * 0.07, 0, Math.PI * 2); ctx.stroke(); }
   ctx.restore();
 
-  // Yıldızlar
-  maze.stars.forEach((s, i) => {
-    if (st.collected.has(i)) return;
-    const phase = now / 260 + i;
-    const bob = Math.sin(phase) * c * 0.03;
-    const sc = 1 + Math.sin(phase) * 0.06;
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,201,77,0.85)'; ctx.shadowBlur = c * 0.25;
-    star(ctx, g.X(s.x), g.Y(s.y) + bob, c * 0.3 * sc, c * 0.13 * sc);
-    ctx.fillStyle = COLORS.gold; ctx.fill();
-    ctx.shadowBlur = 0; ctx.lineWidth = c * 0.03; ctx.strokeStyle = COLORS.ink; ctx.stroke();
-    ctx.restore();
-  });
-
   // Coin'ler
   if (maze.coins) {
     maze.coins.forEach((coin, i) => {
@@ -210,17 +187,6 @@ export function drawFrame(ctx, layer, maze, st, now) {
       }
       ctx.restore();
     });
-  }
-
-  // Toplanan yıldız için kısa "+1" patlaması
-  if (st.popFx && now - st.popFx.t < 700) {
-    const k = (now - st.popFx.t) / 700;
-    const ease = 1 - (1 - k) * (1 - k);
-    ctx.save(); ctx.globalAlpha = 1 - ease; ctx.fillStyle = COLORS.gold;
-    ctx.font = `${Math.round(c * 0.4)}px "Rubik Mono One", sans-serif`; ctx.textAlign = 'center';
-    ctx.shadowColor = COLORS.gold; ctx.shadowBlur = c * 0.3 * (1 - ease);
-    ctx.fillText('−1 sn', g.X(st.popFx.x), g.Y(st.popFx.y) - ease * c * 0.9);
-    ctx.restore();
   }
 
   // Coin toplama efekti

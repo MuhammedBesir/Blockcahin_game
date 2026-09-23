@@ -19,7 +19,7 @@ const DIRS = [
 ];
 
 export function generateMaze(seed, opts) {
-  const { w, h, stars: nStars, traps: nTraps, loops, coins: coinCfg } = opts;
+  const { w, h, traps: nTraps, loops, coins: coinCfg } = opts;
   const rnd = mulberry32(seed);
   const idx = (x, y) => y * w + x;
   const walls = new Uint8Array(w * h).fill(N | E | S | W_);
@@ -88,22 +88,6 @@ export function generateMaze(seed, opts) {
   const used = new Set();
   const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
   const wallCount = (i) => { let c = 0, v = walls[i]; while (v) { c += v & 1; v >>= 1; } return c; };
-
-  const stars = [];
-  const pathMid = shuffle(path.slice(Math.floor(path.length * 0.2), Math.floor(path.length * 0.9)));
-  const deadEnds = shuffle([...Array(w * h).keys()].filter(i => wallCount(i) === 3 && !onPath.has(i) && !blocked.has(i)));
-  const onPathStars = Math.min(2, nStars);
-  for (const [x, y] of pathMid) {
-    if (stars.length >= onPathStars) break;
-    const i = idx(x, y);
-    if (blocked.has(i) || used.has(i)) continue;
-    stars.push({ x: x + 0.5, y: y + 0.5 }); used.add(i);
-  }
-  for (const i of deadEnds) {
-    if (stars.length >= nStars) break;
-    if (used.has(i)) continue;
-    stars.push({ x: (i % w) + 0.5, y: Math.floor(i / w) + 0.5 }); used.add(i);
-  }
 
   // Tuzakların yarısı yol üstündeki dönemeçlerin dış köşesine (hızlı giren düşer),
   // yarısı yola komşu çıkmaz hücrelerin ortasına.
@@ -183,7 +167,7 @@ export function generateMaze(seed, opts) {
   });
 
   return {
-    w, h, seed, walls, dist, path, stars, traps, coins, segs, buckets,
+    w, h, seed, walls, dist, path, traps, coins, segs, buckets,
     start: { x: 0.5, y: 0.5 },
     goal: { x: goal.x + 0.5, y: goal.y + 0.5 },
     startDist: dist[0],

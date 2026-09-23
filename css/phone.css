@@ -95,8 +95,6 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .rank-text .big { font-size: 15px; font-weight: 700; white-space: nowrap; }
 
 .substats { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; min-height: 26px; }
-.stars { display: flex; gap: 4px; align-items: center; }
-.stars .count { font-family: var(--pixel); font-size: 14px; margin-left: 4px; }
 .meta { display: flex; gap: 14px; align-items: center; font-size: 14px; font-weight: 700; color: var(--muted); }
 .falls { display: flex; gap: 6px; align-items: center; }
 #hud-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
