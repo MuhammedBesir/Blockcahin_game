@@ -2,8 +2,8 @@
 // Supabase proje bilgilerini buraya yaz. Anon key tarayıcıda görünür; bu normal.
 // Broadcast kanalları veritabanına dokunmaz, tablo gerekmez.
 
-export const SUPABASE_URL = 'https://PROJE-ID.supabase.co';
-export const SUPABASE_ANON_KEY = 'ANON-KEY-BURAYA';
+export const SUPABASE_URL = 'https://lpijoddaoxdmvuqeborx.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwaWpvZGRhb3hkbXZ1cWVib3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxODcyNjMsImV4cCI6MjEwNTc2MzI2M30.C_6PJrzCVaug1cKM_o_bg-l9VRcCEXWNwrJoYNsl3xM';
 
 // 'free' veya 'pro'. Mesaj hızlarını belirler (README'de hesabı var).
 // Free plan: saniyede 100 olay (gönderilen + teslim edilen), 24 oyuncuyla ancak yavaş güncellemeyle sığar.
