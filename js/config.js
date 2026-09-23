@@ -19,10 +19,8 @@ export const RATES = {
 }[PLAN];
 
 export const GAME = {
-  rounds: 3,
-  roundSeconds: 90,       // tur süre sınırı
-  countdownSeconds: 3,
-  resultsSeconds: 15,     // tur sonu ekranı, sonra sonraki tur otomatik başlar
+  roundSeconds: 90,       // bir oyunun süre sınırı, dolunca "süre doldu" ile biter
+  countdownSeconds: 3,    // KATIL/TEKRAR OYNA sonrası geri sayım; son 1 sn'de eğim kalibre edilir
   mazeW: 8,
   mazeH: 11,
   stars: 5,

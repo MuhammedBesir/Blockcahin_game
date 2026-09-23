@@ -3,6 +3,7 @@ import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
 import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, isBanned } from './net.js';
+import { createSoundKit } from './sound.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -28,10 +29,13 @@ const S = {
   base: { b: 0, g: 0 }, samples: [],
 };
 let ctrlCh = null, meCh = null, posTimer = null;
+const snd = createSoundKit('dl-mute');
 
 // ---------- Ekran yönetimi ----------
 function show(id) {
   document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
+  // Oyun ekranı zaten dolu (süre, sıra rozeti, pusula); ses düğmesi orada göze çarpmasın diye gizlenir.
+  $('#mute-btn').hidden = id === 's-game';
   if (id === 's-game') requestAnimationFrame(layoutMaze);
 }
 
@@ -78,6 +82,16 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 const nameInput = $('#name-input');
 nameInput.value = name;
 
+// ---------- Ses ----------
+const muteBtn = $('#mute-btn');
+function updateMuteBtn() {
+  const m = snd.isMuted();
+  muteBtn.textContent = m ? '🔇' : '🔊';
+  muteBtn.setAttribute('aria-label', m ? 'Sesi aç' : 'Sesi kapat');
+}
+muteBtn.addEventListener('click', () => { snd.unlock(); snd.toggleMuted(); updateMuteBtn(); });
+updateMuteBtn();
+
 function joinError(msg) {
   $('#join-note').classList.add('error');
   $('#join-msg').textContent = msg;
@@ -86,6 +100,7 @@ function joinError(msg) {
 
 $('#join-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  snd.unlock(); // AudioContext de tıklamanın içinde açılmalı, sensör izniyle aynı kural
   // İzin isteği kullanıcı dokunuşunun içinde, ilk await olarak çağrılmalı (iOS kuralı)
   const granted = await askSensorPermission();
   const n = nameInput.value.trim().replace(/\s+/g, ' ').slice(0, 12);
@@ -185,7 +200,7 @@ function finish(now) {
   const stars = S.collected.size, falls = S.falls, raw = S.raw;
   const net = Math.max(0, raw - stars * GAME.starBonusMs);
   send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, stars, falls });
-  if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
+  snd.finish(); if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
   $('#finish-chip').textContent = `OYUN ${S.plays} · BİTİŞ`;
   $('#finish-net').textContent = fmt(net);
   $('#finish-detail').textContent = stars
@@ -238,6 +253,7 @@ function showResults(r) {
   stopConfetti();
   const record = !r.timeout && r.saved && prevBestBeaten(r);
   const first = !r.timeout && r.saved && r.prevBest == null;
+  if (record) snd.record();
   $('#res-chip').textContent = `OYUN ${S.plays}`;
   $('#res-title').textContent = r.timeout ? 'SÜRE DOLDU' : record ? 'YENİ REKOR!' : 'BİTİRDİN';
   if (r.st) {
@@ -289,6 +305,7 @@ function showBanned() {
   S.playing = false; S.countdownEnd = 0;
   clearInterval(posTimer);
   stopConfetti();
+  snd.banned();
   setWait('Engellendin', 'Bu cihaz yönetici tarafından oyundan çıkarıldı. Bir hata olduğunu düşünüyorsan görevliye söyle.');
   $('#wait-tip').hidden = true; $('#wait-lb').hidden = true;
   show('s-wait');
@@ -299,7 +316,7 @@ function setWait(title, text) { $('#wait-title').textContent = title.toLocaleUpp
 
 function prevBestBeaten(r) { return r.prevBest != null && r.net < r.prevBest; }
 
-$('#again-btn').addEventListener('click', () => startGame());
+$('#again-btn').addEventListener('click', () => { snd.tap(); startGame(); });
 
 const crownSvg = '<svg width="22" height="18" viewBox="0 0 28 22" aria-label="Lider"><path d="M3 18L5 6L10.5 11L14 3L17.5 11L23 6L25 18Z" fill="#FFC94D" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><rect x="3" y="18" width="22" height="3" rx="1" fill="#FFC94D"/></svg>';
 
@@ -364,7 +381,8 @@ function frame(now) {
       if (cd.textContent !== label) {
         cd.textContent = label; cd.classList.toggle('go', left <= 0);
         cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
-        if (navigator.vibrate && left > 0) navigator.vibrate(30);
+        if (left > 0) { snd.tick(); if (navigator.vibrate) navigator.vibrate(30); }
+        else snd.go();
       }
       if (left < 1000 && left > 0 && ori.has) S.samples.push({ b: ori.beta, g: ori.gamma });
       if (left <= 0) { S.countdownEnd = 0; goPlaying(); setTimeout(() => { $('#countdown').hidden = true; }, 500); }
@@ -388,12 +406,12 @@ function frame(now) {
         const ev = checkEvents(S.ball, S.maze, S.collected);
         if (ev?.type === 'star') {
           S.collected.add(ev.i); S.popFx = { t: now, x: S.maze.stars[ev.i].x, y: S.maze.stars[ev.i].y };
-          updateStarsHud(); if (navigator.vibrate) navigator.vibrate(25);
+          updateStarsHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(25);
         } else if (ev?.type === 'trap') {
           const tr = S.maze.traps[ev.i];
           S.falling = { t: now, x: tr.x, y: tr.y }; S.falls++; updateFallsHud(); S.trail = [];
           const card = $('#maze-card'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
-          if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+          snd.trap(); if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
         } else if (ev?.type === 'finish') {
           finish(now);
         }

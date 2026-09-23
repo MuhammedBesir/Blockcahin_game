@@ -97,6 +97,10 @@ Aynı anda oynayan oyuncu sayısıyla tahmini yük:
 
 Host tek istemci olarak en fazla 100 kanala girebilir, bu yüzden **toplam katılımcı sayısının** (aynı anda oynamasa da) üst sınırı ~99'dur.
 
+## Ses
+
+Telefonda ve host'ta geri sayım, yıldız, tuzak, bitiş ve rekor için kısa sesler çalar. Harici ses dosyası yok, hepsi `js/sound.js` içinde Web Audio API ile anlık üretilir. Sağ üstteki hoparlör düğmesiyle (host'ta kontrol çubuğunda "Ses kapat") herkes kendi cihazında kapatabilir, tercih o cihazda hatırlanır. iOS kuralı gereği ses ancak bir dokunuşun içinde açılır; telefonda KATIL'a basınca, host'ta ilk tıklama ya da tuşa basmada otomatik açılır.
+
 ## Etkinlik günü kontrol listesi
 
 - [ ] Free plan projeleri 1 hafta hareketsiz kalınca uyku moduna geçer. Bir gün önce host'u açıp projeyi uyandır.

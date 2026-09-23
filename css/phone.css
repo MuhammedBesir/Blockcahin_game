@@ -3,14 +3,22 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 
 .screen {
   position: fixed; inset: 0;
-  display: none; flex-direction: column;
+  display: flex; flex-direction: column;
   padding: max(env(safe-area-inset-top), 20px) 16px max(env(safe-area-inset-bottom), 20px);
   max-width: 480px; margin: 0 auto;
   overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain; touch-action: pan-y;
+  /* Ekranlar arası geçiş: display değil opacity/transform değişir, böylece kaybolan ekran
+     yumuşakça solar, gelen ekran hafifçe yükselerek belirir. Boyutlar hep hazır olduğu için
+     s-game'e geçişte ilk karede labirent doğru ölçekle çizilir. */
+  opacity: 0; transform: translateY(10px); pointer-events: none; visibility: hidden;
+  transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
 }
 .screen > * { flex-shrink: 0; }
-.screen.active { display: flex; }
+.screen.active {
+  opacity: 1; transform: translateY(0); pointer-events: auto; visibility: visible;
+  transition: opacity .22s ease, transform .22s ease, visibility 0s linear 0s;
+}
 /* Oyun ekranı kaymaz: telefon eğilirken sayfa oynamasın */
 #s-game { overflow: hidden; touch-action: none; }
 #s-game > .maze-card { flex-shrink: 1; }
@@ -20,7 +28,7 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 /* ---------- Katılım ---------- */
 #s-join { gap: 20px; padding-left: 20px; padding-right: 20px; }
 .glow-orb { position: absolute; top: -120px; right: -120px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(79,184,240,.28), rgba(79,184,240,0) 70%); pointer-events: none; }
-.join-top { display: flex; justify-content: space-between; align-items: center; position: relative; }
+.join-top { display: flex; justify-content: space-between; align-items: center; position: relative; padding-right: 58px; }
 .club { font-size: 14px; font-weight: 700; color: var(--muted); }
 .hero { display: flex; flex-direction: column; gap: 12px; position: relative; }
 .hero h1 { margin: 0; display: flex; flex-direction: column; font-weight: 400; }
@@ -148,7 +156,7 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 
 /* ---------- Tur sonu ---------- */
 #s-results { gap: 14px; padding-left: 20px; padding-right: 20px; }
-.res-top { display: flex; justify-content: space-between; align-items: center; }
+.res-top { display: flex; justify-content: space-between; align-items: center; padding-right: 58px; }
 .me-name { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
 .res-title { margin: 0; font-family: var(--display); font-weight: 400; font-size: 34px; line-height: 1.05; text-shadow: 0 4px 0 #000; }
 .res-card { background: var(--deep); border: 2px solid var(--neon); border-radius: 26px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 0 #000, 0 0 30px rgba(79,184,240,.2); }
@@ -200,3 +208,12 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .lb-link { color: var(--neon); font-weight: 700; font-size: 15px; text-decoration: none; padding: 8px 12px; }
 .res-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .res-actions .cta { width: 100%; }
+
+/* Sesi kapat/aç: tüm ekranlarda sabit, tek dokunuşla erişilir */
+.mute-btn {
+  position: fixed; z-index: 20; top: max(env(safe-area-inset-top), 14px); right: 14px;
+  width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(79,184,240,.5);
+  background: rgba(6,17,41,.72); color: var(--white); font-size: 19px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mute-btn:active { transform: scale(.92); }

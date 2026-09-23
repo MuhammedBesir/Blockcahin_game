@@ -2,6 +2,7 @@ import { GAME, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { setupCanvas, buildMazeLayer, drawMini } from './render.js';
 import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, fetchLeaderboard, checkAdmin, banPlayer, unbanPlayer, listBans } from './net.js';
+import { createSoundKit } from './sound.js';
 
 // Projeksiyon ekranı: serbest oyunu izler. Tur yönetmez; her oyuncu telefonundan istediği zaman oynar.
 // Kartlarda şu an oynayanların topu kendi labirentinde canlı görünür, sağda genel liderlik akar.
@@ -24,6 +25,13 @@ const players = new Map(); // ekleme sırası = katılım sırası
 let ctrlCh = null, lastHeartbeat = 0;
 // Kalıcı liderlik (Supabase tablosu). Skorları telefonlar yazar.
 const LB = { rows: [], loadedAt: 0, loading: false, error: false, prevRank: new Map() };
+let topEverNet = null; // en iyi süre kaydını takip eder, kırılınca fanfar çalar
+const snd = createSoundKit('dl-mute-host');
+// Projeksiyonda ses ilk kullanıcı dokunuşuyla açılır (host kimse görmeden kimse dokunmamış olabilir,
+// bu yüzden herhangi bir tıklama ya da tuşa basma sesi açmaya yeter)
+const unlockSndOnce = () => { snd.unlock(); removeEventListener('pointerdown', unlockSndOnce); removeEventListener('keydown', unlockSndOnce); };
+addEventListener('pointerdown', unlockSndOnce, { once: true });
+addEventListener('keydown', unlockSndOnce, { once: true });
 
 // ---------- Sahne ölçeği (her projektör çözünürlüğünde 1920×1080 düzen) ----------
 const stage = $('#stage');
@@ -128,6 +136,12 @@ async function loadLeaderboard() {
     }
     LB.prevRank = new Map(rows.map((r) => [r.pid, r.rank]));
     LB.rows = rows; LB.error = false;
+    const best = rows[0];
+    if (best && (topEverNet == null || best.net_ms < topEverNet) && LB.loadedAt) {
+      snd.record();
+      toast(`Yeni rekor! ${best.name} · ${fmtSec(best.net_ms)} sn`);
+    }
+    if (best) topEverNet = best.net_ms;
   } catch (e) { console.warn('Liderlik alınamadı', e); LB.error = true; }
   LB.loading = false; LB.loadedAt = performance.now();
 }
@@ -162,6 +176,7 @@ async function askBan(pid, name) {
   if (!confirm(`"${name}" engellensin mi?\n\nSkorları liderlikten düşer, oyunu kesilir ve bu telefondan tekrar katılamaz.`)) return;
   try { await banPlayer(adminCode, pid, name); }
   catch (e) { console.error(e); alert('Engellenemedi. Yönetici kodu değişmiş olabilir.'); return; }
+  snd.tap();
   bannedPids.add(pid);
   const pl = players.get(pid);
   if (pl) {
@@ -413,6 +428,7 @@ $('#btn-full').addEventListener('click', toggleFull);
 $('#btn-admin').addEventListener('click', adminLogin);
 $('#btn-bans').addEventListener('click', showBans);
 $('#bans-close').addEventListener('click', () => $('#bans').close());
+$('#btn-mute').addEventListener('click', () => { snd.unlock(); const m = snd.toggleMuted(); $('#btn-mute').textContent = m ? 'Ses aç' : 'Ses kapat'; });
 addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea, dialog')) return;
   if (e.key.toLowerCase() === 'f') toggleFull();
@@ -425,6 +441,7 @@ function fmtSec(ms) { return ms == null ? '—' : (ms / 1000).toFixed(2).replace
 
 // ---------- Başlat ----------
 updateAdminUi();
+$('#btn-mute').textContent = snd.isMuted() ? 'Ses aç' : 'Ses kapat';
 layoutGrid();
 (async () => {
   if (!isConfigured()) {
