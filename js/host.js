@@ -1,7 +1,7 @@
 import { GAME, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { setupCanvas, buildMazeLayer, drawMini } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, fetchLeaderboard, checkAdmin, banPlayer, unbanPlayer, listBans } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, fetchLeaderboard, checkAdmin, banPlayer, unbanPlayer, listBans, deletePlayerScores } from './net.js';
 import { createSoundKit } from './sound.js';
 
 // Projeksiyon ekranı: serbest oyunu izler. Tur yönetmez; her oyuncu telefonundan istediği zaman oynar.
@@ -172,7 +172,20 @@ async function adminLogin() {
 
 async function askBan(pid, name) {
   if (!adminCode || pid.startsWith('bot')) return;
-  if (!confirm(`"${name}" engellensin mi?\n\nSkorları liderlikten düşer, oyunu kesilir ve bu telefondan tekrar katılamaz.`)) return;
+  const choice = prompt(
+    `"${name}" için ne yapılsın?\n\n1 → Engelle (skorlar silinir + tekrar katılamaz)\n2 → Sadece skorları sil (engellenmez)\n\nSeçim (1 veya 2):`,
+  );
+  if (!choice) return;
+  const n = choice.trim();
+  if (n === '2') {
+    try { await deletePlayerScores(adminCode, pid); }
+    catch (e) { console.error(e); alert('Skorlar silinemedi.'); return; }
+    snd.tap();
+    loadLeaderboard();
+    toast(`${name} skorları silindi.`);
+    return;
+  }
+  if (n !== '1') return;
   try { await banPlayer(adminCode, pid, name); }
   catch (e) { console.error(e); alert('Engellenemedi. Yönetici kodu değişmiş olabilir.'); return; }
   snd.tap();
@@ -184,7 +197,6 @@ async function askBan(pid, name) {
     players.delete(pid);
     layoutGrid();
   } else {
-    // Liderlikten engellenen oyuncu şu an bağlıysa kanalı yok; yine de oyunu kesilsin
     joinChannel(playerTopic(room, pid)).then((ch) => send(ch, 'ban', {})).catch(() => {});
   }
   loadLeaderboard();

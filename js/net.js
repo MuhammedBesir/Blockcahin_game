@@ -108,3 +108,7 @@ export async function listBans(secret) {
   if (error) throw error;
   return data || [];
 }
+export async function deletePlayerScores(secret, pid) {
+  const { error } = await sb().rpc('delete_player_scores', { p_secret: secret, p_pid: pid });
+  if (error) throw error;
+}
