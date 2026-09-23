@@ -1,7 +1,7 @@
 import { GAME, RATES } from './config.js';
 import { generateMaze } from './maze.js';
 import { setupCanvas, buildMazeLayer, drawMini } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchLeaderboard } from './net.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -19,7 +19,10 @@ const H = {
   phase: 'LOBBY', round: 0, seed: 0, maze: null,
   countdownEnd: 0, playStart: 0, roundEnd: 0, nextAt: 0,
   lastRanksSent: 0, lastRanksKey: '', lastHeartbeat: 0, lastResults: null,
+  showGlobal: false, // L tuşu: tur sonucu yerine genel liderliği göster
 };
+// Kalıcı liderlik (Supabase tablosu)
+const LB = { rows: [], loadedAt: 0, loading: false, error: false };
 const players = new Map(); // ekleme sırası = katılım sırası
 let ctrlCh = null;
 
@@ -190,7 +193,29 @@ function endRound() {
   H.lastResults = { res, order };
   send(ctrlCh, 'results', res);
   broadcastState();
+  saveRound(order);
   if (final) setTimeout(() => showWinner(order), 2500);
+}
+
+// Bitirenlerin süreleri kalıcı liderliğe yazılır. Botlar ve bitiremeyenler yazılmaz.
+async function saveRound(order) {
+  const rows = order.filter((pl) => !pl.bot && pl.done).map((pl) => ({
+    pid: pl.pid, name: pl.name, net_ms: pl.net, raw_ms: pl.raw, stars: pl.stars, falls: Math.min(pl.falls, 999),
+    room, round: H.round, seed: H.seed,
+  }));
+  if (!rows.length || !isConfigured()) return;
+  try { await saveScores(rows); }
+  catch (e) { console.error('Skorlar kaydedilemedi', e); return; }
+  loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+  if (!isConfigured() || LB.loading) return;
+  LB.loading = true;
+  try { LB.rows = await fetchLeaderboard(10); LB.error = false; }
+  catch (e) { console.warn('Liderlik alınamadı', e); LB.error = true; }
+  LB.loading = false; LB.loadedAt = performance.now();
+  if (H.phase === 'FINAL' && !$('#winner').hidden) renderWinnerBoard();
 }
 
 function resetGame() {
@@ -310,9 +335,21 @@ const rowsEl = $('#rows');
 const rowEls = new Map();
 const ROW_STEP = 61;
 
+function globalBoardShown() {
+  return H.phase === 'LOBBY' || (H.showGlobal && H.phase !== 'PLAYING' && H.phase !== 'COUNTDOWN');
+}
+
 function updateBoard(order, now) {
-  const top = H.round > 0 ? order.slice(0, 10) : [];
-  $('#board-empty').hidden = top.length > 0;
+  const global = globalBoardShown();
+  const top = global
+    ? LB.rows.map((r) => ({ pid: `lb:${r.pid}`, name: r.name, done: true, net: r.net_ms, p: 100, upUntil: 0 }))
+    : H.round > 0 ? order.slice(0, 10) : [];
+  const empty = $('#board-empty');
+  empty.hidden = top.length > 0;
+  const emptyText = global
+    ? (LB.error ? 'Liderlik tablosu yüklenemedi.' : 'Henüz kayıt yok. Bir turu bitiren ilk oyuncu buraya yazılır.')
+    : 'Tur başlayınca sıralama burada canlı akacak.';
+  if (empty.textContent !== emptyText) empty.textContent = emptyText;
   const keep = new Set(top.map((p) => p.pid));
   for (const [pid, el] of rowEls) if (!keep.has(pid)) { el.style.opacity = 0; setTimeout(() => el.remove(), 400); rowEls.delete(pid); }
   top.forEach((pl, i) => {
@@ -345,11 +382,26 @@ function showWinner(order) {
   const top3 = order.slice(0, 3);
   if (!top3.length) return;
   const slot = (pl, r) => pl ? `<div class="p ${r === 1 ? 'first' : ''}"><div class="r">${r}.</div>${r === 1 ? crown(90) : ''}<div class="n"></div><div class="t">${pl.done ? fmtSec(pl.net) + ' sn' : '%' + pl.p}</div></div>` : '';
-  w.innerHTML = `<h2>SON TURUN KAZANANLARI</h2><div class="podium">${slot(top3[1], 2)}${slot(top3[0], 1)}${slot(top3[2], 3)}</div>`;
+  w.innerHTML = `<h2>SON TURUN KAZANANLARI</h2><div class="podium">${slot(top3[1], 2)}${slot(top3[0], 1)}${slot(top3[2], 3)}</div><div class="all-time" id="all-time"></div>`;
   const names = w.querySelectorAll('.n');
   const orderIdx = [top3[1], top3[0], top3[2]].filter(Boolean);
   names.forEach((el, i) => { el.textContent = orderIdx[i].name; });
   w.hidden = false;
+  renderWinnerBoard();
+}
+
+function renderWinnerBoard() {
+  const el = $('#all-time'); if (!el) return;
+  const rows = LB.rows.slice(0, 5);
+  el.hidden = !rows.length;
+  el.innerHTML = `<div class="label">GENEL LİDERLİK · TÜM ZAMANLAR</div><ol></ol>`;
+  const ol = el.querySelector('ol');
+  rows.forEach((r) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="r">${r.rank}</span><span class="n"></span><span class="t num">${fmtSec(r.net_ms)}</span>`;
+    li.querySelector('.n').textContent = r.name;
+    ol.appendChild(li);
+  });
 }
 
 // ---------- Başlık ----------
@@ -365,7 +417,7 @@ function updateHeader(now, order) {
   document.querySelector('.clock').classList.toggle('warn', H.phase === 'PLAYING' && H.roundEnd - now < 10000);
   $('#c-players').textContent = players.size;
   $('#c-done').textContent = order.filter((p) => p.done).length;
-  $('#board-title').textContent = H.phase === 'ROUND_END' || H.phase === 'FINAL' ? `TUR ${H.round} SONUCU` : 'İLK 10';
+  $('#board-title').textContent = globalBoardShown() ? 'GENEL LİDERLİK' : H.phase === 'ROUND_END' || H.phase === 'FINAL' ? `TUR ${H.round} SONUCU` : 'İLK 10';
   $('#live').classList.toggle('off', H.phase !== 'PLAYING');
   $('#btn-start').disabled = !(H.phase === 'LOBBY' || H.phase === 'ROUND_END');
   $('#btn-end').disabled = H.phase !== 'PLAYING';
@@ -407,6 +459,7 @@ setInterval(() => {
   if (H.phase !== 'PLAYING' && H.lastResults) order = H.lastResults.order;
   if (H.phase === 'LOBBY' || H.phase === 'COUNTDOWN') order = [];
   if (now - H.lastHeartbeat > RATES.heartbeatMs) broadcastState();
+  if (globalBoardShown() && now - LB.loadedAt > 30000) loadLeaderboard();
   updateCards(now);
   updateBoard(order, now);
   updateHeader(now, order);
@@ -442,13 +495,16 @@ $('#btn-start').addEventListener('click', startRound);
 $('#btn-end').addEventListener('click', endRound);
 $('#btn-reset').addEventListener('click', () => { if (confirm('Tüm turlar sıfırlansın mı? Oyuncular bağlı kalır.')) resetGame(); });
 $('#btn-full').addEventListener('click', toggleFull);
+$('#btn-global').addEventListener('click', toggleGlobal);
 addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea')) return;
   const k = e.key.toLowerCase();
   if (k === 's') startRound();
   else if (k === 'e') endRound();
   else if (k === 'f') toggleFull();
+  else if (k === 'l') toggleGlobal();
 });
+function toggleGlobal() { H.showGlobal = !H.showGlobal; if (H.showGlobal) loadLeaderboard(); }
 function toggleFull() { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
 
 // ---------- Yardımcılar ----------
@@ -471,4 +527,5 @@ layoutGrid();
     $('#ctrl-note').textContent = st === 'SUBSCRIBED' ? `Bağlı · oda ${room}` : `Bağlantı: ${st}`;
   });
   broadcastState();
+  loadLeaderboard();
 })();

@@ -2,7 +2,7 @@ import { GAME, PHYSICS, RATES } from './config.js';
 import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, fetchStanding } from './net.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -340,6 +340,30 @@ function showResults(res) {
   }
   next.hidden = false;
   show('s-results');
+  showStanding(res, mine && mine[1] != null ? mine[2] : null);
+}
+
+// Genel liderlikteki yerin. Host skoru tur biter bitmez yazar; yazma bitmemişse bir kez daha sorulur.
+let standingReq = 0;
+async function showStanding(res, netThisRound) {
+  const box = $('#res-global');
+  const req = ++standingReq;
+  box.hidden = true;
+  const ask = async () => { try { return await fetchStanding(pid); } catch { return null; } };
+  await new Promise((r) => setTimeout(r, 1500));
+  let st = await ask();
+  const landed = (x) => x && (netThisRound == null || x.best_ms <= netThisRound);
+  if (!landed(st) && netThisRound != null) { await new Promise((r) => setTimeout(r, 2500)); st = await ask(); }
+  if (req !== standingReq || !st) return;
+  const record = netThisRound != null && st.best_ms === netThisRound && st.runs > 1;
+  const first = netThisRound != null && st.runs === 1;
+  $('#g-rank').textContent = `${st.rank}.`;
+  $('#g-of').textContent = `${st.total} oyuncu içinde`;
+  $('#g-best').textContent = `En iyi süren: ${fmtSec(st.best_ms)} sn`;
+  const badge = $('#g-badge');
+  badge.hidden = !(record || first);
+  badge.textContent = record ? 'YENİ REKOR!' : 'İLK KAYDIN';
+  box.hidden = false;
 }
 
 const crownSvg = '<svg width="22" height="18" viewBox="0 0 28 22" aria-label="Lider"><path d="M3 18L5 6L10.5 11L14 3L17.5 11L23 6L25 18Z" fill="#FFC94D" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><rect x="3" y="18" width="22" height="3" rx="1" fill="#FFC94D"/></svg>';

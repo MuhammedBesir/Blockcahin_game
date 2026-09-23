@@ -47,3 +47,24 @@ export function send(ch, event, payload) {
 export function leave(ch) {
   if (ch) sb().removeChannel(ch);
 }
+
+// ---------- Kalıcı liderlik (Postgres, Realtime mesaj bütçesine sayılmaz) ----------
+// rows: [{ pid, name, net_ms, raw_ms, stars, falls, room, round, seed }]
+export async function saveScores(rows) {
+  if (!rows.length) return;
+  const { error } = await sb().from('scores').insert(rows);
+  if (error) throw error;
+}
+
+export async function fetchLeaderboard(limit = 50) {
+  const { data, error } = await sb().rpc('leaderboard', { p_limit: limit });
+  if (error) throw error;
+  return data || [];
+}
+
+// { best_ms, rank, total, runs } ya da henüz kaydı yoksa null
+export async function fetchStanding(pid) {
+  const { data, error } = await sb().rpc('player_standing', { p_pid: pid });
+  if (error) throw error;
+  return data?.[0] || null;
+}

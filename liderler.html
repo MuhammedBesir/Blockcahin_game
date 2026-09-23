@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1E3F">
+<title>Genel Liderlik · Denge Labirenti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/leaderboard.css">
+</head>
+<body>
+<div class="dots"></div>
+<main class="lb">
+  <header class="lb-top">
+    <div class="chip">ESTÜ BlockChain</div>
+    <h1><span class="t1">GENEL</span><span class="t2">LİDERLİK</span></h1>
+    <p class="sub">Her oyuncunun en iyi net süresi. Net süre = ham süre − yıldız bonusu.</p>
+  </header>
+
+  <section class="me" id="me" hidden>
+    <div class="label">SENİN YERİN</div>
+    <div class="me-row"><div class="me-rank" id="me-rank">–</div><div><div class="me-of" id="me-of"></div><div class="me-best" id="me-best"></div></div></div>
+  </section>
+
+  <ol class="list" id="list" aria-live="polite"></ol>
+  <p class="empty" id="empty" hidden>Henüz kayıt yok. Bir turu bitiren ilk oyuncu buraya yazılır.</p>
+  <p class="foot" id="foot">Yükleniyor…</p>
+</main>
+<script type="module" src="js/leaderboard.js"></script>
+</body>
+</html>

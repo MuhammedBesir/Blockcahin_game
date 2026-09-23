@@ -1,10 +1,11 @@
 # Denge Labirenti
 
-Telefonu eğerek oynanan, çok oyunculu labirent yarışı. Statik site (Vercel) + Supabase Realtime Broadcast. Build adımı yok, sunucu kodu yok, veritabanı tablosu yok.
+Telefonu eğerek oynanan, çok oyunculu labirent yarışı. Statik site (Vercel) + Supabase Realtime Broadcast. Build adımı yok, sunucu kodu yok. Tek veritabanı tablosu kalıcı liderlik için (`scores`).
 
 ```
 index.html      → katılımcı telefonu (/?oda=4827)
 host.html       → projeksiyon ekranı (/host)
+liderler.html   → genel liderlik sayfası (/liderler)
 js/config.js    → Supabase bilgileri, oyun ve fizik ayarları
 js/maze.js      → seed'li labirent üretimi (her cihaz aynı seed'den aynı labirenti üretir)
 js/physics.js   → top fiziği, duvar çarpışması, yıldız/tuzak/bitiş
@@ -12,6 +13,8 @@ js/render.js    → canvas çizimleri (labirent, top, iz, pusula, mini kartlar)
 js/net.js       → Supabase kanal sarmalayıcı
 js/phone.js     → telefon akışı
 js/host.js      → host akışı, sıralama, tur yönetimi
+js/leaderboard.js → /liderler sayfası
+supabase/migrations/ → liderlik tablosu (scores) ve sıralama fonksiyonları
 ```
 
 ## Kurulum
@@ -39,6 +42,7 @@ Fareyi oynatınca sol altta kontroller belirir, 3 saniye sonra kaybolur. Projeks
 | `S` | Turu başlat. Tur sonu ekranındayken bekleme süresini atlar. |
 | `E` | Turu erken bitir |
 | `F` | Tam ekran |
+| `L` | Genel liderlik ↔ tur sonucu (tur dışındayken) |
 | Oyunu sıfırla | Tur sayacını sıfırlar, oyuncular bağlı kalır |
 
 **Tur akışı:** 3 sn geri sayım → en fazla 90 sn oyun → 15 sn sonuç ekranı → sonraki tur otomatik başlar. Herkes bitirirse tur erken kapanır. 3 turdan sonra podyum gösterilir.
@@ -53,6 +57,18 @@ Fareyi oynatınca sol altta kontroller belirir, 3 saniye sonra kaybolur. Projeks
 - **Canlı sıralama:** Bitirenler net süreye göre sıralanır. Bitirmeyenler ilerleme yüzdesine göre onların altına dizilir.
 - **Tur sonunda bitiremeyenler:** Süre dolduğunda bitiremeyenler ilerlemelerine göre sıralanır.
 - **Geç katılan:** Turun bitmesine 20 sn'den fazla varsa hemen başlar. Yoksa sonraki turu bekler.
+
+## Genel liderlik (kalıcı)
+
+- Her tur bittiğinde host, **bitiren** oyuncuların sürelerini Supabase'deki `scores` tablosuna yazar. Botlar ve bitiremeyenler yazılmaz. Hile filtresinden geçmeyen bitişler zaten kabul edilmez.
+- Oyuncu kimliği telefonun tarayıcısındaki `dl-pid` değeridir. Aynı telefondan oynayan kişi tüm etkinlik boyunca aynı oyuncu sayılır. Liderlikte her oyuncunun **en iyi net süresi** yer alır.
+- **Host:** Bekleme ekranında sağdaki tablo genel liderliği gösterir. Finalde podyumun altında ilk 5 çıkar. Tur sonunda `L` ile tur sonucu ↔ genel liderlik arasında geçilir.
+- **Telefon:** Tur sonu ekranında genel sıran, en iyi süren ve "YENİ REKOR!" rozeti görünür. Karta dokununca `/liderler` yeni sekmede açılır (oyun bağlantısı kopmaz).
+- **`/liderler`:** Herkese açık, 15 sn'de bir yenilenen tam liste.
+- Veritabanı işlemleri Realtime mesaj bütçesine sayılmaz.
+- Şema: `supabase/migrations/20260923190000_scores_leaderboard.sql`. Anon anahtar yalnızca ekleme ve okuma yapabilir; güncelleme/silme yasak. 4 sn'den kısa süreler reddedilir.
+- Her tur farklı labirentte oynandığı için süreler tam eşit koşullarda değildir; labirent boyutu ve yıldız/tuzak sayısı sabit olduğundan karşılaştırma yaklaşık olarak adildir.
+- Liderliği sıfırlamak için Supabase SQL editöründe: `truncate public.scores;`
 
 ## Mesaj bütçesi: bunu atlama
 
@@ -89,5 +105,6 @@ Bu yüzden kanal düzeni şöyle:
 ## Bilinen sınırlar
 
 - **Hile koruması temel düzeyde.** Host, `minPlausibleMs` değerinden hızlı ve geçen tur süresinden uzun bitişleri reddeder. Tarayıcı konsolunu bilen biri sahte `fin` mesajı yollayabilir. Oryantasyon için yeterli, ödüllü yarış için değil.
-- **Tur puanları toplanmıyor.** Her tur kendi sıralamasına sahip, final podyumu son turu gösterir. Genel klasman istersen `host.js` › `endRound` içinde puanları biriktir.
+- **Final podyumu son turu gösterir.** Tüm zamanların sıralaması ayrıca genel liderlikte tutulur.
+- **Liderlik de temel düzeyde korunur.** Anon anahtarı bilen biri `scores` tablosuna doğrudan sahte süre ekleyebilir. Gerekirse Supabase panelinden satır silinir.
 - **Sadece dikey mod.** Telefon yatay çevrilirse "Telefonu dik tut" uyarısı çıkar.

@@ -187,3 +187,14 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .rotate { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: var(--navy); font-family: var(--display); font-size: 22px; text-align: center; padding: 24px; }
 @media (orientation: landscape) and (max-height: 520px) { .rotate { display: flex; } }
 .conn { position: fixed; left: 12px; right: 12px; top: max(env(safe-area-inset-top), 10px); z-index: 40; background: #000; border: 2px solid var(--white); border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: 14px; text-align: center; }
+
+/* ---------- Genel liderlik ---------- */
+.global-card { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; background: var(--deep); border: 2px solid rgba(79,184,240,.4); border-radius: 22px; padding: 12px 16px; }
+.g-head { display: flex; justify-content: space-between; align-items: center; }
+.g-badge { background: var(--gold); color: var(--navy); font-family: var(--pixel); font-size: 12px; letter-spacing: 1px; padding: 4px 10px; border-radius: 999px; animation: pop .7s cubic-bezier(.2,1.4,.4,1) both; }
+.g-row { display: flex; align-items: center; gap: 14px; }
+.g-rank { font-family: var(--display); font-size: 40px; line-height: 1; color: var(--neon); text-shadow: 0 3px 0 #000; }
+.g-of { font-size: 16px; font-weight: 700; }
+.g-best { font-size: 13px; color: var(--muted); }
+.g-go { margin-left: auto; font-size: 32px; color: var(--neon); }
+.lb-link { color: var(--neon); font-weight: 700; font-size: 15px; text-decoration: none; padding: 8px 12px; }
