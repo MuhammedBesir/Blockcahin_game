@@ -139,8 +139,10 @@ export function buildMazeLayer(maze, cssW, cssH, { mini = false } = {}) {
 export function drawFrame(ctx, layer, maze, st, now) {
   const { canvas, geom: g } = layer;
   const c = g.cell;
+  const cw = layer._cw || (layer._cw = parseFloat(canvas.style.width));
+  const ch = layer._ch || (layer._ch = parseFloat(canvas.style.height));
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.drawImage(canvas, 0, 0, parseFloat(canvas.style.width), parseFloat(canvas.style.height));
+  ctx.drawImage(canvas, 0, 0, cw, ch);
 
   // Bitiş parıltısı
   const pulse = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(now / 280));
@@ -160,8 +162,9 @@ export function drawFrame(ctx, layer, maze, st, now) {
   // Yıldızlar
   maze.stars.forEach((s, i) => {
     if (st.collected.has(i)) return;
-    const bob = Math.sin(now / 260 + i) * c * 0.03;
-    const sc = 1 + Math.sin(now / 260 + i) * 0.06;
+    const phase = now / 260 + i;
+    const bob = Math.sin(phase) * c * 0.03;
+    const sc = 1 + Math.sin(phase) * 0.06;
     ctx.save();
     ctx.shadowColor = 'rgba(255,201,77,0.85)'; ctx.shadowBlur = c * 0.25;
     star(ctx, g.X(s.x), g.Y(s.y) + bob, c * 0.3 * sc, c * 0.13 * sc);
@@ -173,10 +176,11 @@ export function drawFrame(ctx, layer, maze, st, now) {
   // Toplanan yıldız için kısa "+1" patlaması
   if (st.popFx && now - st.popFx.t < 700) {
     const k = (now - st.popFx.t) / 700;
-    ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = COLORS.gold;
+    const ease = 1 - (1 - k) * (1 - k);
+    ctx.save(); ctx.globalAlpha = 1 - ease; ctx.fillStyle = COLORS.gold;
     ctx.font = `${Math.round(c * 0.4)}px "Rubik Mono One", sans-serif`; ctx.textAlign = 'center';
-    ctx.shadowColor = COLORS.gold; ctx.shadowBlur = c * 0.3 * (1 - k);
-    ctx.fillText('−1 sn', g.X(st.popFx.x), g.Y(st.popFx.y) - k * c * 0.8);
+    ctx.shadowColor = COLORS.gold; ctx.shadowBlur = c * 0.3 * (1 - ease);
+    ctx.fillText('−1 sn', g.X(st.popFx.x), g.Y(st.popFx.y) - ease * c * 0.9);
     ctx.restore();
   }
 
@@ -184,24 +188,29 @@ export function drawFrame(ctx, layer, maze, st, now) {
   if (st.particles) st.particles.draw(ctx, g);
 
   const b = st.ball;
-  const scale = st.falling ? Math.max(0, 1 - (now - st.falling.t) / 500) : (st.respawnAt ? Math.min(1, (now - st.respawnAt) / 300) : 1);
+  const fallK = st.falling ? Math.min(1, (now - st.falling.t) / 500) : 0;
+  const spawnK = st.respawnAt ? Math.min(1, (now - st.respawnAt) / 300) : 1;
+  const easeOut = (t) => 1 - (1 - t) * (1 - t);
+  const scale = st.falling ? Math.max(0, 1 - easeOut(fallK)) : easeOut(spawnK);
   const R = 0.3 * c * scale;
 
-  // İz
-  if (!st.falling) {
+  // İz: yumuşak gradient
+  if (!st.falling && st.trail.length > 1) {
     for (let i = 0; i < st.trail.length; i++) {
       const p = st.trail[i], k = (i + 1) / st.trail.length;
-      ctx.beginPath(); ctx.fillStyle = `rgba(79,184,240,${0.05 + k * 0.4})`;
-      ctx.arc(g.X(p.x), g.Y(p.y), R * (0.35 + k * 0.55), 0, Math.PI * 2); ctx.fill();
+      const alpha = 0.03 + k * k * 0.35;
+      ctx.beginPath(); ctx.fillStyle = `rgba(79,184,240,${alpha})`;
+      ctx.arc(g.X(p.x), g.Y(p.y), R * (0.3 + k * 0.6), 0, Math.PI * 2); ctx.fill();
     }
   }
 
   if (R > 0.5) {
     const bx = st.falling ? g.X(st.falling.x) : g.X(b.x), by = st.falling ? g.Y(st.falling.y) : g.Y(b.y);
-    // gölge
-    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.filter = 'blur(2px)';
-    ctx.beginPath(); ctx.ellipse(bx + R * 0.3, by + R * 0.6, R * 1.02, R * 0.66, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    // gölge (radial gradient yerine blur filtresi — mobilde daha hafif)
+    const sgrd = ctx.createRadialGradient(bx + R * 0.15, by + R * 0.4, 0, bx + R * 0.15, by + R * 0.4, R * 1.3);
+    sgrd.addColorStop(0, 'rgba(0,0,0,0.45)'); sgrd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sgrd;
+    ctx.beginPath(); ctx.ellipse(bx + R * 0.15, by + R * 0.4, R * 1.1, R * 0.7, 0, 0, Math.PI * 2); ctx.fill();
     // gövde
     const grd = ctx.createRadialGradient(bx - R * 0.35, by - R * 0.4, R * 0.1, bx, by, R);
     grd.addColorStop(0, '#FFFFFF'); grd.addColorStop(0.3, '#CDEEFF'); grd.addColorStop(0.65, COLORS.neon); grd.addColorStop(1, '#154C7C');

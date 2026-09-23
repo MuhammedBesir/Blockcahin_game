@@ -3,7 +3,7 @@
 
 export function createParticleSystem() {
   const pool = [];
-  const MAX = 300;
+  const MAX = 120;
 
   function spawn(n, cfg) {
     for (let i = 0; i < n; i++) {
@@ -31,22 +31,14 @@ export function createParticleSystem() {
   function emit(type, x, y, cell) {
     const c = cell || 40;
     switch (type) {
-      case 'star':
-        spawn(18, { x, y, speed: c * 2.5, life: 0.5, r: c * 0.06, colors: ['#FFC94D', '#FFE599', '#FFFFFF', '#FFD700'], jitter: c * 0.1, gravity: c * 1.5 });
-        spawn(6, { x, y, speed: c * 1.2, life: 0.7, r: c * 0.04, colors: ['#FFC94D', '#FFE599'], shape: 'star', jitter: c * 0.05 });
-        break;
       case 'trap':
-        spawn(14, { x, y, speed: c * 1.8, life: 0.45, r: c * 0.05, colors: ['#4FB8F0', '#1C5F95', '#081733', '#000000'], gravity: c * 3, friction: 3 });
-        spawn(8, { x, y, speed: c * 0.6, life: 0.6, r: c * 0.08, colors: ['rgba(79,184,240,0.6)', 'rgba(0,0,0,0.8)'], shape: 'ring', jitter: c * 0.15 });
+        spawn(12, { x, y, speed: c * 1.6, life: 0.4, r: c * 0.045, colors: ['#4FB8F0', '#1C5F95', '#081733'], gravity: c * 3, friction: 3 });
+        spawn(6, { x, y, speed: c * 0.5, life: 0.5, r: c * 0.07, colors: ['rgba(79,184,240,0.5)', 'rgba(0,0,0,0.7)'], shape: 'ring', jitter: c * 0.12 });
         break;
       case 'finish':
         for (let i = 0; i < 3; i++) {
-          spawn(12, { x, y, speed: c * (2 + i * 1.5), life: 0.6 + i * 0.15, r: c * 0.05, colors: ['#4FB8F0', '#FFFFFF', '#FFC94D', '#CDEEFF'], jitter: c * 0.2, gravity: c * 0.8 });
+          spawn(10, { x, y, speed: c * (2 + i * 1.2), life: 0.5 + i * 0.12, r: c * 0.045, colors: ['#4FB8F0', '#FFFFFF', '#FFC94D', '#CDEEFF'], jitter: c * 0.15, gravity: c * 0.6 });
         }
-        spawn(8, { x, y, speed: c * 0.8, life: 0.9, r: c * 0.04, colors: ['#FFC94D', '#FFE599'], shape: 'star' });
-        break;
-      case 'trail':
-        spawn(1, { x, y, speed: c * 0.3, life: 0.35, r: c * 0.035, colors: ['rgba(79,184,240,0.5)', 'rgba(79,184,240,0.3)'], jitter: c * 0.08 });
         break;
     }
   }

@@ -82,10 +82,14 @@ function rawTilt() {
   }
   return { g: ori.gamma, b: ori.beta, kb: false };
 }
+const smoothTilt = { x: 0, y: 0 };
 function tilt() {
   const r = rawTilt();
-  if (r.kb) return { x: r.g, y: r.b };
-  return { x: r.g - S.base.g, y: r.b - S.base.b };
+  const raw = r.kb ? { x: r.g, y: r.b } : { x: r.g - S.base.g, y: r.b - S.base.b };
+  const k = 0.35;
+  smoothTilt.x += (raw.x - smoothTilt.x) * k;
+  smoothTilt.y += (raw.y - smoothTilt.y) * k;
+  return smoothTilt;
 }
 
 async function askSensorPermission() {
@@ -466,14 +470,13 @@ function frame(now) {
       } else {
         const { ax, ay } = tiltToAccel(t.x, t.y);
         stepBall(S.ball, S.maze, ax, ay, dt);
-        if (now - S.lastTrailT > 28) {
+        if (now - S.lastTrailT > 20) {
           S.trail.push({ x: S.ball.x, y: S.ball.y }); S.lastTrailT = now;
-          if (S.trail.length > 9) S.trail.shift();
+          if (S.trail.length > 14) S.trail.shift();
         }
         const ev = checkEvents(S.ball, S.maze, S.collected);
         if (ev?.type === 'star') {
           S.collected.add(ev.i); S.popFx = { t: now, x: S.maze.stars[ev.i].x, y: S.maze.stars[ev.i].y };
-          S.particles.emit('star', S.maze.stars[ev.i].x, S.maze.stars[ev.i].y, S.layer.geom.cell);
           updateStarsHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(25);
         } else if (ev?.type === 'trap') {
           const tr = S.maze.traps[ev.i];
@@ -493,9 +496,6 @@ function frame(now) {
     }
 
     if (S.particles) S.particles.update(dt);
-    if (S.playing && !S.falling && S.particles && S.ball && S.layer && Math.hypot(S.ball.vx, S.ball.vy) > 1) {
-      S.particles.emit('trail', S.ball.x, S.ball.y, S.layer.geom.cell);
-    }
     if (S.ctx && S.layer) drawFrame(S.ctx, S.layer, S.maze, S, now);
 
     // Pusula
