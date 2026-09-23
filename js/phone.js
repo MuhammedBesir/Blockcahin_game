@@ -2,7 +2,7 @@ import { GAME, PHYSICS, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, fetchStanding } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, isBanned } from './net.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -20,17 +20,14 @@ let name = store.get('dl-name') || '';
 
 // ---------- Durum ----------
 const S = {
-  hostId: null, welcomed: false, phaseKey: '',
-  round: 0, seed: null, rounds: GAME.rounds,
+  hostId: null, plays: 0, best: null, seed: 0, banned: false, // best: { best_ms, rank, total, runs } (genel liderlik)
   maze: null, layer: null, ctx: null,
   ball: null, collected: new Set(), falls: 0, trail: [], lastTrailT: 0,
   falling: null, respawnAt: null, popFx: null,
   countdownEnd: 0, playing: false, startT: 0, finished: false, raw: 0, finishShownAt: 0,
-  rank: null, total: 0, rankAtFinish: null,
-  pendingResults: null,
   base: { b: 0, g: 0 }, samples: [],
 };
-let ctrlCh = null, meCh = null, helloTimer = null, posTimer = null;
+let ctrlCh = null, meCh = null, posTimer = null;
 
 // ---------- Ekran yönetimi ----------
 function show(id) {
@@ -92,87 +89,55 @@ $('#join-form').addEventListener('submit', async (e) => {
   // İzin isteği kullanıcı dokunuşunun içinde, ilk await olarak çağrılmalı (iOS kuralı)
   const granted = await askSensorPermission();
   const n = nameInput.value.trim().replace(/\s+/g, ' ').slice(0, 12);
-  if (!n) { nameInput.focus(); return joinError('Bir takma ad yaz, projeksiyonda bu isimle görüneceksin.'); }
+  if (!n) { nameInput.focus(); return joinError('Bir takma ad yaz, liderlikte bu isimle görüneceksin.'); }
   if (!granted) return joinError('Sensör izni verilmedi. Ayarlar › Safari › Hareket ve Yön Erişimi’ni aç, sayfayı yenile.');
   if (!isConfigured()) return joinError('Sunucu ayarı eksik: js/config.js içindeki Supabase bilgilerini doldur.');
 
-  name = n; store.set('dl-name', name);
   const btn = $('#join-btn'); btn.disabled = true; btn.firstChild.textContent = 'BAĞLANIYOR';
+  try { S.banned = await isBanned(pid); } catch { /* ağ hatasında oyuna izin ver, skor yazımı yine engellenir */ }
+  btn.disabled = false; btn.firstChild.textContent = 'KATIL';
+  if (S.banned) return showBanned();
+
+  name = n; store.set('dl-name', name);
+  nameInput.blur();
   keepAwake();
-  try {
-    await connect();
-  } catch (err) {
-    console.error(err);
-    return joinError('Bağlanılamadı. İnternetini kontrol edip tekrar dene.');
-  }
   $('#hud-name').textContent = name;
   $('#res-name').textContent = name;
-  setWait('Hazırsın, ' + name, 'Projeksiyona bağlanılıyor…');
-  show('s-wait');
+  connect(); // projeksiyon açıksa canlı izlensin; oyun bunu beklemez
+  refreshBest();
+  startGame();
 });
 
-function setWait(title, text) { $('#wait-title').textContent = title; $('#wait-text').textContent = text; }
-
-// ---------- Ağ ----------
-function onChannelStatus(status) {
-  $('#conn').hidden = status === 'SUBSCRIBED';
-  if (status === 'SUBSCRIBED' && ctrlCh && !S.welcomed) sayHello();
-}
-
+// ---------- Projeksiyon (isteğe bağlı) ----------
+// Host açıksa oyuncunun topu projeksiyonda canlı görünür. Host yoksa oyun aynen çalışır.
 async function connect() {
-  ctrlCh = await joinChannel(ctrlTopic(room), { state: onState, ranks: onRanks, results: onResults }, onChannelStatus);
-  meCh = await joinChannel(playerTopic(room, pid), { welcome: onWelcome }, onChannelStatus);
-  sayHello();
-  clearInterval(helloTimer);
-  helloTimer = setInterval(() => { if (!S.welcomed) sayHello(); }, 3000);
+  if (ctrlCh) return;
+  try {
+    ctrlCh = await joinChannel(ctrlTopic(room), { state: onHostState }, onChannelStatus);
+    meCh = await joinChannel(playerTopic(room, pid), { ban: showBanned }, () => {});
+    sayHello();
+  } catch (err) { console.warn('Projeksiyona bağlanılamadı', err); }
+}
+function onChannelStatus(status) { if (status === 'SUBSCRIBED' && ctrlCh) sayHello(); }
+function onHostState(st) {
+  // Host sayfası açıldı ya da yenilendi: kendini tanıt
+  if (st.hostId !== S.hostId) { S.hostId = st.hostId; sayHello(); }
 }
 function sayHello() { send(ctrlCh, 'hello', { pid, name }); }
 
-function onWelcome(msg) {
-  S.welcomed = true;
-  S.hostId = msg.hostId;
-  applyState(msg.state, true);
-}
-
-function onState(st) {
-  if (st.hostId !== S.hostId) {
-    // Host sayfası yenilenmiş: yeniden tanıt
-    S.hostId = st.hostId; S.welcomed = false; sayHello();
-  }
-  applyState(st, false);
-}
-
-function applyState(st, force) {
-  const key = `${st.hostId}:${st.round}:${st.seed}:${st.phase}`;
-  if (!force && key === S.phaseKey) return;
-  S.phaseKey = key;
-  S.rounds = st.rounds || GAME.rounds;
-
-  if (st.phase === 'LOBBY') {
-    if (!S.playing) { setWait('Hazırsın, ' + name, 'Oyuncular toplanıyor. Tur başlayınca labirent ekranına geçeceksin.'); show('s-wait'); }
-  } else if (st.phase === 'COUNTDOWN') {
-    if (S.seed !== st.seed) startRound(st, st.countdownMs);
-  } else if (st.phase === 'PLAYING') {
-    if (S.seed !== st.seed) {
-      // Geç katılan: kalan süre yeterliyse kısa geri sayımla hemen başlasın
-      if (st.remainingMs > 20000) startRound(st, 3000);
-      else { setWait('Tur bitmek üzere', 'Bir sonraki turda başlıyorsun.'); show('s-wait'); }
-    }
-  } else if (st.phase === 'ROUND_END' || st.phase === 'FINAL') {
-    if (S.playing && !S.finished) stopPlaying();
-  }
-}
-
-// ---------- Tur ----------
-function startRound(st, countdownMs) {
-  S.round = st.round; S.seed = st.seed;
-  S.maze = generateMaze(st.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops });
+// ---------- Oyun ----------
+// Her oyunda yeni labirent. Seed konum mesajıyla projeksiyona gider, o da aynı labirenti çizer.
+function startGame() {
+  if (S.banned) return showBanned();
+  S.plays++;
+  S.seed = (Math.random() * 4294967296) >>> 0;
+  S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops });
   S.ball = createBall(S.maze);
   S.collected = new Set(); S.falls = 0; S.trail = []; S.falling = null; S.respawnAt = null; S.popFx = null;
-  S.finished = false; S.playing = false; S.raw = 0; S.rank = null; S.rankAtFinish = null; S.pendingResults = null;
+  S.finished = false; S.playing = false; S.raw = 0;
   S.samples = [];
-  S.countdownEnd = performance.now() + countdownMs;
-  updateStarsHud(); updateFallsHud(); updateRankHud(null);
+  S.countdownEnd = performance.now() + GAME.countdownSeconds * 1000;
+  updateStarsHud(); updateFallsHud(); updateBestHud();
   $('#timer').textContent = fmt(0);
   $('#countdown').hidden = false;
   show('s-game');
@@ -191,23 +156,25 @@ function goPlaying() {
   sendPos();
 }
 
-function stopPlaying() {
-  S.playing = false;
-  clearInterval(posTimer);
-  $('#countdown').hidden = true;
-  setWait('Süre doldu', 'Bu turu bitiremedin. Sonuçlar geliyor…');
-  show('s-wait');
-}
-
 function sendPos() {
-  if (!S.playing || S.finished || !S.ball) return;
+  if (!S.playing || S.finished || !S.ball || !meCh) return;
   const b = S.falling ? S.falling : S.ball;
   send(meCh, 'pos', {
-    r: S.round,
+    r: S.plays, sd: S.seed,
     x: Math.round(b.x * 100), y: Math.round(b.y * 100),
     p: Math.round(S.maze.progressAt(S.ball.x, S.ball.y) * 100),
     f: S.falling ? 1 : 0, s: S.collected.size,
   });
+}
+
+// Süre sınırı doldu
+function timeUp() {
+  S.playing = false;
+  clearInterval(posTimer);
+  send(meCh, 'out', { r: S.plays });
+  if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+  const pct = Math.round(S.maze.progressAt(S.ball.x, S.ball.y) * 100);
+  loadBoard().then(({ st, top }) => showResults({ timeout: true, pct, stars: S.collected.size, falls: S.falls, st, top }));
 }
 
 function finish(now) {
@@ -215,151 +182,134 @@ function finish(now) {
   S.playing = false;
   clearInterval(posTimer);
   S.raw = Math.round(now - S.startT);
-  send(meCh, 'fin', { r: S.round, raw: S.raw, stars: S.collected.size, falls: S.falls });
+  const stars = S.collected.size, falls = S.falls, raw = S.raw;
+  const net = Math.max(0, raw - stars * GAME.starBonusMs);
+  send(meCh, 'fin', { r: S.plays, sd: S.seed, raw, stars, falls });
   if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 160]);
-  S.rankAtFinish = null;
-  const net = Math.max(0, S.raw - S.collected.size * GAME.starBonusMs);
-  $('#finish-chip').textContent = `TUR ${S.round} · BİTİŞ`;
+  $('#finish-chip').textContent = `OYUN ${S.plays} · BİTİŞ`;
   $('#finish-net').textContent = fmt(net);
-  $('#finish-detail').textContent = S.collected.size
-    ? `${fmtSec(S.raw)} sn − ${fmtSec(S.collected.size * GAME.starBonusMs)} sn yıldız bonusu`
-    : `${fmtSec(S.raw)} sn · yıldız bonusu yok`;
-  renderStars($('#finish-stars'), S.collected.size, 22, false);
-  $('#finish-stars-sub').textContent = `${S.collected.size}/${GAME.stars} yıldız`;
-  updateFinishRank();
+  $('#finish-detail').textContent = stars
+    ? `${fmtSec(raw)} sn − ${fmtSec(stars * GAME.starBonusMs)} sn yıldız bonusu`
+    : `${fmtSec(raw)} sn · yıldız bonusu yok`;
+  renderStars($('#finish-stars'), stars, 22, false);
+  $('#finish-stars-sub').textContent = `${stars}/${GAME.stars} yıldız`;
+  $('#finish-rank').textContent = '–';
+  $('#finish-rank-sub').textContent = 'genel sıra hesaplanıyor';
   S.finishShownAt = performance.now();
   show('s-finish');
   startConfetti();
+  saveAndShow({ raw, net, stars, falls });
 }
 
-// ---------- Sıralama / sonuç ----------
-function onRanks(msg) {
-  if (msg.round !== S.round) return;
-  const r = msg.r[pid];
-  S.total = msg.n;
-  if (r == null) return;
-  const prev = S.rank;
-  S.rank = r;
-  if (S.finished && S.rankAtFinish == null) S.rankAtFinish = r;
-  updateRankHud(prev);
-  updateFinishRank();
+// ---------- Skor / liderlik ----------
+async function refreshBest() {
+  try { S.best = await fetchStanding(pid); } catch { /* ağ yoksa rekor gösterilmez */ }
+  updateBestHud();
 }
 
-function updateRankHud(prev) {
-  const badge = $('#rank-badge');
-  if (S.rank == null) { $('#rank-num').textContent = '–'; $('#rank-line').textContent = 'sıra bekleniyor'; $('#rank-up').toggleAttribute('hidden', true); return; }
-  $('#rank-num').textContent = `${S.rank}.`;
-  $('#rank-line').textContent = `${S.rank}. sıradasın`;
-  const up = prev != null && S.rank < prev;
-  $('#rank-up').toggleAttribute('hidden', !up);
-  if (prev != null && prev !== S.rank) { badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
+async function loadBoard() {
+  try {
+    const [st, top] = await Promise.all([fetchStanding(pid), fetchLeaderboard(5)]);
+    S.best = st;
+    return { st, top };
+  } catch (e) { console.warn('Liderlik alınamadı', e); return { st: null, top: [] }; }
 }
 
-function updateFinishRank() {
-  $('#finish-rank').textContent = S.rank ? `${S.rank}.` : '–';
-  $('#finish-rank-sub').textContent = S.rank ? `sıradasın · ${S.total} oyuncu` : 'sıra hesaplanıyor';
-}
-
-function onResults(res) {
-  if (res.round !== S.round) {
-    // Bu turu oynamadıysa sadece bekleme mesajı
-    if (!S.playing) { setWait(res.final ? 'Oyun bitti' : 'Tur bitti', res.final ? 'Sonuçlar projeksiyonda.' : 'Bir sonraki turda başlıyorsun.'); show('s-wait'); }
-    return;
+async function saveAndShow(r) {
+  const prevBest = S.best?.best_ms ?? null;
+  let saved = true, tooFast = false;
+  if (r.raw < GAME.minPlausibleMs) { saved = false; tooFast = true; }
+  else {
+    try {
+      await saveScores([{ pid, name, net_ms: r.net, raw_ms: r.raw, stars: r.stars, falls: Math.min(r.falls, 999), room, round: S.plays, seed: S.seed }]);
+    } catch (e) { console.error('Skor kaydedilemedi', e); saved = false; }
   }
-  if (S.playing && !S.finished) stopPlaying();
-  S.pendingResults = res;
-  // Bitirdin ekranı en az 4 sn görünsün
-  const wait = S.finished ? Math.max(0, 4000 - (performance.now() - S.finishShownAt)) : 0;
-  setTimeout(() => { if (S.pendingResults === res) showResults(res); }, wait);
+  const { st, top } = await loadBoard();
+  if (st) {
+    $('#finish-rank').textContent = `${st.rank}.`;
+    $('#finish-rank-sub').textContent = `genel sıra · ${st.total} oyuncu`;
+  }
+  // Bitirdin ekranı en az 3,5 sn görünsün
+  const wait = Math.max(0, 3500 - (performance.now() - S.finishShownAt));
+  setTimeout(() => showResults({ ...r, saved, tooFast, prevBest, st, top }), wait);
 }
 
-function showResults(res) {
+function showResults(r) {
   stopConfetti();
-  const mine = res.all[pid]; // [sıra, ham, net, yıldız, düşme, yüzde]
-  $('#res-chip').textContent = `TUR ${res.round} / ${res.rounds}`;
-  $('#res-title').textContent = res.final ? 'OYUN BİTTİ' : 'TUR SONU';
-  if (mine) {
-    const [rank, raw, net, stars, falls, pct] = mine;
-    $('#res-rank').textContent = `${rank}.`;
-    $('#res-of').textContent = `${res.total} oyuncu içinde`;
-    const dl = $('#res-breakdown');
-    if (raw != null) {
-      $('#res-note').textContent = S.rankAtFinish && S.rankAtFinish !== rank
-        ? `Bitişte ${S.rankAtFinish}. sıradaydın.` : (rank === 1 ? 'Turun en hızlısı sensin.' : '');
-      dl.innerHTML = `
-        <dt>Ham süre</dt><dd>${fmtSec(raw)} sn</dd>
-        <dt>Yıldız bonusu (${stars} × ${GAME.starBonusMs / 1000} sn)</dt><dd class="bonus">−${fmtSec(stars * GAME.starBonusMs)} sn</dd>
-        <dt>Düşme</dt><dd>${falls} kez</dd>
-        <dt class="total">NET SÜRE</dt><dd class="total">${fmtSec(net)}</dd>`;
-    } else {
-      $('#res-note').textContent = 'Süre dolduğunda bitişe ulaşamadın.';
-      dl.innerHTML = `
-        <dt>İlerleme</dt><dd>%${pct}</dd>
-        <dt>Yıldız</dt><dd>${stars}/${GAME.stars}</dd>
-        <dt>Düşme</dt><dd>${falls} kez</dd>`;
-    }
+  const record = !r.timeout && r.saved && prevBestBeaten(r);
+  const first = !r.timeout && r.saved && r.prevBest == null;
+  $('#res-chip').textContent = `OYUN ${S.plays}`;
+  $('#res-title').textContent = r.timeout ? 'SÜRE DOLDU' : record ? 'YENİ REKOR!' : 'BİTİRDİN';
+  if (r.st) {
+    $('#res-rank').textContent = `${r.st.rank}.`;
+    $('#res-of').textContent = `genel sıra · ${r.st.total} oyuncu`;
   } else {
-    $('#res-rank').textContent = '–'; $('#res-of').textContent = 'Bu turda sonuç yok'; $('#res-note').textContent = ''; $('#res-breakdown').innerHTML = '';
+    $('#res-rank').textContent = '–';
+    $('#res-of').textContent = r.timeout ? 'henüz skorun yok' : 'genel sıra alınamadı';
+  }
+  let note = '';
+  if (r.timeout) note = 'Süre dolmadan bitişe ulaşamadın.';
+  else if (r.tooFast) note = 'Bu bitiş olağandışı hızlı, skor sayılmadı.';
+  else if (!r.saved) note = 'Skor kaydedilemedi. İnternetini kontrol et.';
+  else if (record) note = `Önceki rekorun ${fmtSec(r.prevBest)} sn idi.`;
+  else if (first) note = 'İlk skorun liderliğe yazıldı.';
+  else if (r.st) note = `Rekorun ${fmtSec(r.st.best_ms)} sn.`;
+  $('#res-note').textContent = note;
+  const dl = $('#res-breakdown');
+  if (!r.timeout) {
+    dl.innerHTML = `
+      <dt>Ham süre</dt><dd>${fmtSec(r.raw)} sn</dd>
+      <dt>Yıldız bonusu (${r.stars} × ${GAME.starBonusMs / 1000} sn)</dt><dd class="bonus">−${fmtSec(r.stars * GAME.starBonusMs)} sn</dd>
+      <dt>Düşme</dt><dd>${r.falls} kez</dd>
+      <dt class="total">NET SÜRE</dt><dd class="total">${fmtSec(r.net)}</dd>`;
+  } else {
+    dl.innerHTML = `
+      <dt>İlerleme</dt><dd>%${r.pct}</dd>
+      <dt>Yıldız</dt><dd>${r.stars}/${GAME.stars}</dd>
+      <dt>Düşme</dt><dd>${r.falls} kez</dd>`;
   }
   const ol = $('#res-top');
   ol.innerHTML = '';
-  res.top.forEach(([rpid, nm, net], i) => {
+  r.top.forEach((row) => {
     const li = document.createElement('li');
-    if (i === 0) li.classList.add('lead');
-    if (rpid === pid) li.classList.add('me');
-    li.innerHTML = `<span class="r">${i + 1}</span>${i === 0 ? crownSvg : ''}<span class="nm"></span><span class="num">${net == null ? '—' : fmtSec(net)}</span>`;
-    li.querySelector('.nm').textContent = nm;
-    if (rpid === pid) li.querySelector('.nm').insertAdjacentHTML('beforeend', '<span class="you">SEN</span>');
+    if (row.rank === 1) li.classList.add('lead');
+    if (row.pid === pid) li.classList.add('me');
+    li.innerHTML = `<span class="r">${row.rank}</span>${row.rank === 1 ? crownSvg : ''}<span class="nm"></span><span class="num">${fmtSec(row.net_ms)}</span>`;
+    li.querySelector('.nm').textContent = row.name;
+    if (row.pid === pid) li.querySelector('.nm').insertAdjacentHTML('beforeend', '<span class="you">SEN</span>');
     ol.appendChild(li);
   });
-  const next = $('#res-next');
-  if (res.final) {
-    $('#next-label').textContent = 'TEŞEKKÜRLER';
-    $('#next-text').textContent = 'Oyun bitti. Kazananlar projeksiyonda.';
-    $('#next-num').textContent = '✓';
-    $('#next-ring').style.strokeDashoffset = 0;
-  } else {
-    $('#next-label').textContent = 'SONRAKİ TUR';
-    $('#next-text').textContent = 'Telefonu rahat tuttuğun açıda tut, başlarken eğim sıfırlanacak.';
-    const end = performance.now() + res.nextInMs;
-    const ring = $('#next-ring');
-    const tick = () => {
-      const left = Math.max(0, end - performance.now());
-      $('#next-num').textContent = Math.ceil(left / 1000);
-      ring.style.strokeDashoffset = 188.5 * (1 - left / res.nextInMs);
-      if (left > 0 && $('#s-results').classList.contains('active')) requestAnimationFrame(tick);
-    };
-    tick();
-  }
-  next.hidden = false;
+  $('#res-top-wrap').hidden = !r.top.length;
+  updateBestHud();
   show('s-results');
-  showStanding(res, mine && mine[1] != null ? mine[2] : null);
+}
+// Yönetici bu cihazı engelledi
+function showBanned() {
+  S.banned = true;
+  S.playing = false; S.countdownEnd = 0;
+  clearInterval(posTimer);
+  stopConfetti();
+  setWait('Engellendin', 'Bu cihaz yönetici tarafından oyundan çıkarıldı. Bir hata olduğunu düşünüyorsan görevliye söyle.');
+  $('#wait-tip').hidden = true; $('#wait-lb').hidden = true;
+  show('s-wait');
 }
 
-// Genel liderlikteki yerin. Host skoru tur biter bitmez yazar; yazma bitmemişse bir kez daha sorulur.
-let standingReq = 0;
-async function showStanding(res, netThisRound) {
-  const box = $('#res-global');
-  const req = ++standingReq;
-  box.hidden = true;
-  const ask = async () => { try { return await fetchStanding(pid); } catch { return null; } };
-  await new Promise((r) => setTimeout(r, 1500));
-  let st = await ask();
-  const landed = (x) => x && (netThisRound == null || x.best_ms <= netThisRound);
-  if (!landed(st) && netThisRound != null) { await new Promise((r) => setTimeout(r, 2500)); st = await ask(); }
-  if (req !== standingReq || !st) return;
-  const record = netThisRound != null && st.best_ms === netThisRound && st.runs > 1;
-  const first = netThisRound != null && st.runs === 1;
-  $('#g-rank').textContent = `${st.rank}.`;
-  $('#g-of').textContent = `${st.total} oyuncu içinde`;
-  $('#g-best').textContent = `En iyi süren: ${fmtSec(st.best_ms)} sn`;
-  const badge = $('#g-badge');
-  badge.hidden = !(record || first);
-  badge.textContent = record ? 'YENİ REKOR!' : 'İLK KAYDIN';
-  box.hidden = false;
-}
+// Başlık fontunda küçük "ı" yok: Türkçe büyük harfe çevir
+function setWait(title, text) { $('#wait-title').textContent = title.toLocaleUpperCase('tr-TR'); $('#wait-text').textContent = text; }
+
+function prevBestBeaten(r) { return r.prevBest != null && r.net < r.prevBest; }
+
+$('#again-btn').addEventListener('click', () => startGame());
 
 const crownSvg = '<svg width="22" height="18" viewBox="0 0 28 22" aria-label="Lider"><path d="M3 18L5 6L10.5 11L14 3L17.5 11L23 6L25 18Z" fill="#FFC94D" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><rect x="3" y="18" width="22" height="3" rx="1" fill="#FFC94D"/></svg>';
+
+// Oyun ekranındaki rozet: genel sıran ve rekorun
+function updateBestHud() {
+  const b = S.best;
+  $('#rank-num').textContent = b ? `${b.rank}.` : '–';
+  $('#rank-small').textContent = b ? 'Rekorun' : 'İlk oyunun';
+  $('#rank-line').textContent = b ? `${fmtSec(b.best_ms)} sn` : 'rekorunu koy';
+}
 
 // ---------- HUD ----------
 const starPoly = '<polygon points="12,0 15.06,7.79 23.41,8.29 16.95,13.61 19.05,21.71 12,17.2 4.95,21.71 7.05,13.61 .59,8.29 8.94,7.79"/>';
@@ -448,7 +398,10 @@ function frame(now) {
           finish(now);
         }
       }
-      if (S.playing) $('#timer').textContent = fmt(now - S.startT);
+      if (S.playing) {
+        $('#timer').textContent = fmt(now - S.startT);
+        if (now - S.startT >= GAME.roundSeconds * 1000) timeUp();
+      }
     }
 
     if (S.ctx && S.layer) drawFrame(S.ctx, S.layer, S.maze, S, now);

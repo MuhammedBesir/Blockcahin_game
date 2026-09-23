@@ -68,3 +68,29 @@ export async function fetchStanding(pid) {
   if (error) throw error;
   return data?.[0] || null;
 }
+
+// ---------- Engelleme ----------
+export async function isBanned(pid) {
+  const { data, error } = await sb().rpc('is_banned', { p_pid: pid });
+  if (error) throw error;
+  return data === true;
+}
+// Yönetici işlemleri: kod veritabanında bcrypt özetiyle doğrulanır
+export async function checkAdmin(secret) {
+  const { data, error } = await sb().rpc('check_admin', { p_secret: secret });
+  if (error) throw error;
+  return data === true;
+}
+export async function banPlayer(secret, pid, name) {
+  const { error } = await sb().rpc('ban_player', { p_secret: secret, p_pid: pid, p_name: name });
+  if (error) throw error;
+}
+export async function unbanPlayer(secret, pid) {
+  const { error } = await sb().rpc('unban_player', { p_secret: secret, p_pid: pid });
+  if (error) throw error;
+}
+export async function listBans(secret) {
+  const { data, error } = await sb().rpc('list_bans', { p_secret: secret });
+  if (error) throw error;
+  return data || [];
+}

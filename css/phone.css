@@ -198,3 +198,5 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .g-best { font-size: 13px; color: var(--muted); }
 .g-go { margin-left: auto; font-size: 32px; color: var(--neon); }
 .lb-link { color: var(--neon); font-weight: 700; font-size: 15px; text-decoration: none; padding: 8px 12px; }
+.res-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.res-actions .cta { width: 100%; }

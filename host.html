@@ -28,15 +28,15 @@
       </div>
     </div>
     <div class="center">
-      <div class="round-pill" id="round-pill">HAZIRLIK</div>
+      <div class="round-pill" id="round-pill">SERBEST OYUN</div>
       <div class="clock">
-        <div class="clock-label" id="clock-label">OYUNCULAR BEKLENİYOR</div>
-        <div class="clock-value num" id="clock-value">--:--</div>
+        <div class="clock-label" id="clock-label">REKOR</div>
+        <div class="clock-value num" id="clock-value">--,--</div>
       </div>
     </div>
     <div class="counts">
-      <div class="count"><b id="c-players">0</b><span>oyuncu</span></div>
-      <div class="count"><b id="c-done" class="neon">0</b><span>bitirdi</span></div>
+      <div class="count"><b id="c-players" class="neon">0</b><span>oynuyor</span></div>
+      <div class="count"><b id="c-done">0</b><span>katıldı</span></div>
     </div>
   </header>
 
@@ -53,19 +53,19 @@
       </div>
       <div class="grid" id="grid"></div>
       <div class="grid-empty" id="grid-empty">
-        <p>Telefonunla QR’ı okut, adını yaz, katıl.</p>
-        <p class="dim">Katılan herkesin labirenti burada canlı görünecek.</p>
+        <p>Telefonunla QR’ı okut, adını yaz, hemen oyna.</p>
+        <p class="dim">Oynayan herkesin topu burada canlı görünecek.</p>
       </div>
     </section>
 
     <aside class="side">
-      <section class="board" aria-label="İlk 10">
+      <section class="board" aria-label="Genel liderlik">
         <div class="board-head">
-          <h2 id="board-title">İLK 10</h2>
+          <h2 id="board-title">GENEL LİDERLİK</h2>
           <div class="live" id="live"><span></span>CANLI</div>
         </div>
         <div class="rows" id="rows"></div>
-        <p class="board-empty" id="board-empty">Tur başlayınca sıralama burada canlı akacak.</p>
+        <p class="board-empty" id="board-empty">Yükleniyor…</p>
       </section>
       <section class="join">
         <div class="qr" id="qr" aria-label="Katılım QR kodu"></div>
@@ -77,19 +77,20 @@
     </aside>
   </main>
 
-  <div class="big-count" id="big-count" hidden><span id="big-count-num">3</span></div>
-  <div class="winner" id="winner" hidden></div>
 </div>
 
 <div class="controls" id="controls">
-  <button type="button" id="btn-start" class="primary">Turu başlat <kbd>S</kbd></button>
-  <button type="button" id="btn-end">Turu bitir <kbd>E</kbd></button>
-  <button type="button" id="btn-reset">Oyunu sıfırla</button>
   <button type="button" id="btn-full">Tam ekran <kbd>F</kbd></button>
-  <button type="button" id="btn-global">Genel liderlik <kbd>L</kbd></button>
+  <button type="button" id="btn-admin">Yönetici girişi</button>
+  <button type="button" id="btn-bans" hidden>Engellenenler</button>
   <span class="ctrl-note" id="ctrl-note"></span>
 </div>
 <div class="setup-error" id="setup-error" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<dialog class="bans" id="bans" aria-labelledby="bans-title">
+  <div class="bans-head"><h2 id="bans-title">Engellenen oyuncular</h2><button type="button" id="bans-close" aria-label="Kapat">✕</button></div>
+  <ul id="bans-list"></ul>
+</dialog>
 
 <script type="module" src="js/host.js"></script>
 </body>
