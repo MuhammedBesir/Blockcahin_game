@@ -2,8 +2,9 @@ import { GAME, PHYSICS, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
-import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, isBanned } from './net.js';
+import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchStanding, fetchLeaderboard, fetchPlayerStats, isBanned } from './net.js';
 import { createSoundKit } from './sound.js';
+import { createParticleSystem } from './particles.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -175,6 +176,7 @@ function startGame() {
   S.maze = generateMaze(S.seed, { w: GAME.mazeW, h: GAME.mazeH, stars: GAME.stars, traps: GAME.traps, loops: GAME.loops });
   S.ball = createBall(S.maze);
   S.collected = new Set(); S.falls = 0; S.trail = []; S.falling = null; S.respawnAt = null; S.popFx = null;
+  S.particles = createParticleSystem();
   S.finished = false; S.playing = false; S.raw = 0;
   S.samples = [];
   S.countdownEnd = performance.now() + GAME.countdownSeconds * 1000;
@@ -271,9 +273,11 @@ async function saveAndShow(r) {
     $('#finish-rank').textContent = `${st.rank}.`;
     $('#finish-rank-sub').textContent = `genel sıra · ${st.total} oyuncu`;
   }
+  let stats = null;
+  try { stats = await fetchPlayerStats(pid); } catch { /* istatistik alınamazsa yok say */ }
   // Bitirdin ekranı en az 3,5 sn görünsün
   const wait = Math.max(0, 3500 - (performance.now() - S.finishShownAt));
-  setTimeout(() => showResults({ ...r, saved, tooFast, prevBest, st, top }), wait);
+  setTimeout(() => showResults({ ...r, saved, tooFast, prevBest, st, top, stats }), wait);
 }
 
 function showResults(r) {
@@ -323,6 +327,35 @@ function showResults(r) {
     ol.appendChild(li);
   });
   $('#res-top-wrap').hidden = !r.top.length;
+
+  // İstatistikler
+  const statsEl = $('#res-stats');
+  if (r.stats && r.stats.games > 0) {
+    statsEl.hidden = false;
+    $('#stat-games').textContent = r.stats.games;
+    $('#stat-avg').textContent = r.stats.avg_ms != null ? fmtSec(Math.round(r.stats.avg_ms)) : '–';
+    $('#stat-best').textContent = r.stats.best1_ms != null ? fmtSec(r.stats.best1_ms) : '–';
+    const top3el = $('#stat-top3');
+    top3el.innerHTML = '';
+    const bests = [
+      { ms: r.stats.best1_ms, stars: r.stats.best1_stars, at: r.stats.best1_at },
+      { ms: r.stats.best2_ms, stars: r.stats.best2_stars, at: r.stats.best2_at },
+      { ms: r.stats.best3_ms, stars: r.stats.best3_stars, at: r.stats.best3_at },
+    ].filter(b => b.ms != null);
+    if (bests.length > 1) {
+      const lbl = document.createElement('div'); lbl.className = 'label'; lbl.textContent = 'EN İYİ 3 SKORUN'; top3el.appendChild(lbl);
+      bests.forEach((b, i) => {
+        const row = document.createElement('div');
+        row.className = 'st-row' + (i === 0 ? ' gold' : '');
+        const ago = b.at ? timeAgo(b.at) : '';
+        row.innerHTML = `<span class="st-i">${i + 1}.</span><span class="st-t">${fmtSec(b.ms)} sn</span><span class="st-d">${ago}</span>`;
+        top3el.appendChild(row);
+      });
+    }
+  } else {
+    statsEl.hidden = true;
+  }
+
   updateBestHud();
   show('s-results');
 }
@@ -367,6 +400,13 @@ function renderStars(el, n, size, withCount) {
 function updateStarsHud() { renderStars($('#hud-stars'), S.collected.size, 20, true); }
 function updateFallsHud() { $('#hud-falls').textContent = `${S.falls} düşme`; }
 
+function timeAgo(iso) {
+  const d = new Date(iso), now = Date.now(), diff = now - d.getTime();
+  if (diff < 60000) return 'az önce';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} dk önce`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} sa önce`;
+  return `${Math.floor(diff / 86400000)} gün önce`;
+}
 function fmt(ms) {
   const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000), cs = Math.floor((ms % 1000) / 10);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(cs).padStart(2, '0')}`;
@@ -433,13 +473,16 @@ function frame(now) {
         const ev = checkEvents(S.ball, S.maze, S.collected);
         if (ev?.type === 'star') {
           S.collected.add(ev.i); S.popFx = { t: now, x: S.maze.stars[ev.i].x, y: S.maze.stars[ev.i].y };
+          S.particles.emit('star', S.maze.stars[ev.i].x, S.maze.stars[ev.i].y, S.layer.geom.cell);
           updateStarsHud(); snd.star(); if (navigator.vibrate) navigator.vibrate(25);
         } else if (ev?.type === 'trap') {
           const tr = S.maze.traps[ev.i];
+          S.particles.emit('trap', tr.x, tr.y, S.layer.geom.cell);
           S.falling = { t: now, x: tr.x, y: tr.y }; S.falls++; updateFallsHud(); S.trail = [];
           const card = $('#maze-card'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
           snd.trap(); if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
         } else if (ev?.type === 'finish') {
+          S.particles.emit('finish', S.maze.goal.x, S.maze.goal.y, S.layer.geom.cell);
           finish(now);
         }
       }
@@ -449,6 +492,10 @@ function frame(now) {
       }
     }
 
+    if (S.particles) S.particles.update(dt);
+    if (S.playing && !S.falling && S.particles && S.ball && S.layer && Math.hypot(S.ball.vx, S.ball.vy) > 1) {
+      S.particles.emit('trail', S.ball.x, S.ball.y, S.layer.geom.cell);
+    }
     if (S.ctx && S.layer) drawFrame(S.ctx, S.layer, S.maze, S, now);
 
     // Pusula

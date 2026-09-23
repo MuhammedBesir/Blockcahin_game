@@ -69,6 +69,13 @@ export async function fetchStanding(pid) {
   return data?.[0] || null;
 }
 
+// { games, avg_ms, best1_ms, best1_stars, best1_at, ... } ya da null
+export async function fetchPlayerStats(pid) {
+  const { data, error } = await sb().rpc('player_stats', { p_pid: pid });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
 // ---------- Engelleme ----------
 export async function isBanned(pid) {
   const { data, error } = await sb().rpc('is_banned', { p_pid: pid });

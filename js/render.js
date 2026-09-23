@@ -175,9 +175,13 @@ export function drawFrame(ctx, layer, maze, st, now) {
     const k = (now - st.popFx.t) / 700;
     ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = COLORS.gold;
     ctx.font = `${Math.round(c * 0.4)}px "Rubik Mono One", sans-serif`; ctx.textAlign = 'center';
+    ctx.shadowColor = COLORS.gold; ctx.shadowBlur = c * 0.3 * (1 - k);
     ctx.fillText('−1 sn', g.X(st.popFx.x), g.Y(st.popFx.y) - k * c * 0.8);
     ctx.restore();
   }
+
+  // Parçacıklar (varsa)
+  if (st.particles) st.particles.draw(ctx, g);
 
   const b = st.ball;
   const scale = st.falling ? Math.max(0, 1 - (now - st.falling.t) / 500) : (st.respawnAt ? Math.min(1, (now - st.respawnAt) / 300) : 1);
