@@ -3,7 +3,7 @@
 Telefonu eğerek oynanan, çok oyunculu labirent yarışı. Statik site (Vercel) + Supabase Realtime Broadcast. Build adımı yok, sunucu kodu yok. Tek veritabanı tablosu kalıcı liderlik için (`scores`).
 
 ```
-index.html      → katılımcı telefonu (/?oda=4827)
+index.html      → katılımcı telefonu (/)
 host.html       → projeksiyon ekranı (/host)
 liderler.html   → genel liderlik sayfası (/liderler)
 js/config.js    → Supabase bilgileri, oyun ve fizik ayarları
@@ -25,12 +25,12 @@ supabase/migrations/ → liderlik tablosu (scores) ve sıralama fonksiyonları
 4. **Vercel'e deploy et.** İki yol var:
    - `npx vercel --prod` komutunu klasörün içinde çalıştır.
    - Ya da repoyu GitHub'a at ve Vercel'den "Import" ile bağla. Framework seçimi: **Other**. Build komutu boş, output klasörü `.` (kök).
-5. **Host ekranını aç.** Projeksiyondaki bilgisayarda `https://<alan-adın>/host` adresini aç, `F` ile tam ekrana geç. Oda kodu otomatik üretilir ve adres çubuğuna yazılır. Sayfayı yenilemek aynı odayı korur.
+5. **Host ekranını aç.** Projeksiyondaki bilgisayarda `https://<alan-adın>/host` adresini aç, `F` ile tam ekrana geç. Oda kodu yok: telefonlar QR'ı okutur ya da siteye girer, adını yazıp katılır. Tek bir oyun odası vardır (`js/config.js` › `ROOM`), bu yüzden aynı anda **tek host ekranı** açık olmalı. İki ayrı etkinliği aynı anda yapacaksan ikinci kopyada `ROOM` değerini değiştir.
 
 ## Test
 
 - **Arayüz, Supabase'siz:** `/host?bots=20` 20 sahte oyuncu açar. `S` ile turu başlat. Botlar sadece host tarafında yaşar, ağ trafiği üretmez.
-- **Telefonu masaüstünde denemek:** `/?oda=XXXX&test` açıp ok tuşlarıyla oynarsın. Oda kodu host ekranındaki kodla aynı olmalı.
+- **Telefonu masaüstünde denemek:** `/?test` açıp ok tuşlarıyla oynarsın.
 - **Gerçek test:** En az bir iPhone ve bir Android ile dene. iOS'te sensör izni sadece HTTPS'te ve KATIL'a dokunulduğu anda istenebilir. Localhost'ta iPhone test edemezsin, deploy edilmiş adresi kullan.
 
 ## Host kontrolleri

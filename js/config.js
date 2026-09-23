@@ -9,6 +9,10 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Free plan: saniyede 100 olay (gönderilen + teslim edilen), 24 oyuncuyla ancak yavaş güncellemeyle sığar.
 export const PLAN = 'free';
 
+// Tek oyun odası: oda kodu yok, herkes aynı yarışa katılır.
+// Aynı anda iki ayrı etkinlik yapılacaksa ikinci kopyada bunu değiştir (4-6 rakam).
+export const ROOM = '1000';
+
 export const RATES = {
   free: { posHz: 1, rankMinMs: 2000, heartbeatMs: 6000 },
   pro:  { posHz: 4, rankMinMs: 1000, heartbeatMs: 5000 },

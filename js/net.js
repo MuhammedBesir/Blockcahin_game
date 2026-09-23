@@ -1,7 +1,7 @@
 // Supabase Realtime (Broadcast) sarmalayıcı.
 // Kanal düzeni:
-//   dl-<oda>          → herkes: host durum/sıra/sonuç yayını, oyuncuların "hello" mesajı
-//   dl-<oda>-<pid>    → sadece o oyuncu + host: konum, bitiş, karşılama
+//   dl-<ROOM>         → herkes: host durum/sıra/sonuç yayını, oyuncuların "hello" mesajı
+//   dl-<ROOM>-<pid>   → sadece o oyuncu + host: konum, bitiş, karşılama
 // Konum trafiği kişisel kanalda aktığı için diğer telefonlara dağıtılmaz (fan-out yok).
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';

@@ -101,7 +101,6 @@ html, body { overflow: hidden; background: #050E20; }
 .join-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .join-title { font-family: var(--display); font-size: 32px; line-height: 1; }
 .join-url { font-size: 22px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
-.join-room { font-family: var(--display); font-size: 24px; }
 
 /* Büyük geri sayım + kazanan */
 .big-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(6,17,41,.78); z-index: 10; }

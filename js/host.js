@@ -1,4 +1,4 @@
-import { GAME, RATES } from './config.js';
+import { GAME, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { setupCanvas, buildMazeLayer, drawMini } from './render.js';
 import { isConfigured, joinChannel, send, ctrlTopic, playerTopic, saveScores, fetchLeaderboard } from './net.js';
@@ -7,9 +7,7 @@ const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const BOTS = Math.min(60, parseInt(params.get('bots') || '0', 10) || 0); // host.html?bots=20 → sahte oyuncularla arayüz testi
 
-let room = (params.get('oda') || '').replace(/\D/g, '').slice(0, 6);
-if (!room) { room = String(1000 + Math.floor(Math.random() * 9000)); }
-history.replaceState(null, '', `?oda=${room}${BOTS ? `&bots=${BOTS}` : ''}`);
+const room = ROOM;
 const hostId = Math.random().toString(36).slice(2, 10);
 
 const MAX_CARDS = 24;
@@ -35,9 +33,8 @@ function fit() {
 addEventListener('resize', fit); fit();
 
 // ---------- Katılım alanı ----------
-const joinUrl = new URL(`./?oda=${room}`, location.href).href;
-$('#join-url').textContent = `${location.host}/?oda=${room}`;
-$('#join-room').textContent = `ODA ${room}`;
+const joinUrl = new URL('./', location.href).href;
+$('#join-url').textContent = location.host;
 try {
   const qr = window.qrcode(0, 'M');
   qr.addData(joinUrl); qr.make();
@@ -524,7 +521,7 @@ layoutGrid();
     return;
   }
   ctrlCh = await joinChannel(ctrlTopic(room), { hello: onHello }, (st) => {
-    $('#ctrl-note').textContent = st === 'SUBSCRIBED' ? `Bağlı · oda ${room}` : `Bağlantı: ${st}`;
+    $('#ctrl-note').textContent = st === 'SUBSCRIBED' ? 'Bağlı' : `Bağlantı: ${st}`;
   });
   broadcastState();
   loadLeaderboard();

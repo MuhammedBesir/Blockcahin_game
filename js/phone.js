@@ -1,4 +1,4 @@
-import { GAME, PHYSICS, RATES } from './config.js';
+import { GAME, PHYSICS, RATES, ROOM } from './config.js';
 import { generateMaze } from './maze.js';
 import { createBall, stepBall, tiltToAccel, checkEvents } from './physics.js';
 import { setupCanvas, buildMazeLayer, drawFrame, drawGauge } from './render.js';
@@ -15,7 +15,7 @@ const store = {
 };
 let pid = store.get('dl-pid');
 if (!pid) { pid = Math.random().toString(36).slice(2, 8); store.set('dl-pid', pid); }
-let room = (params.get('oda') || '').replace(/\D/g, '').slice(0, 6);
+const room = ROOM;
 let name = store.get('dl-name') || '';
 
 // ---------- Durum ----------
@@ -78,12 +78,8 @@ async function keepAwake() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && wakeLock) keepAwake(); });
 
 // ---------- Katılım ----------
-const roomChip = $('#room-chip');
 const nameInput = $('#name-input');
-const roomInput = $('#room-input');
 nameInput.value = name;
-if (room) roomChip.textContent = `ODA ${room}`;
-else { roomChip.hidden = true; $('#room-field').hidden = false; }
 
 function joinError(msg) {
   $('#join-note').classList.add('error');
@@ -96,8 +92,6 @@ $('#join-form').addEventListener('submit', async (e) => {
   // İzin isteği kullanıcı dokunuşunun içinde, ilk await olarak çağrılmalı (iOS kuralı)
   const granted = await askSensorPermission();
   const n = nameInput.value.trim().replace(/\s+/g, ' ').slice(0, 12);
-  if (!room) room = roomInput.value.replace(/\D/g, '').slice(0, 6);
-  if (!room || room.length < 4) return joinError('Oda kodunu yaz. Projeksiyonda QR’ın yanında görünüyor.');
   if (!n) { nameInput.focus(); return joinError('Bir takma ad yaz, projeksiyonda bu isimle görüneceksin.'); }
   if (!granted) return joinError('Sensör izni verilmedi. Ayarlar › Safari › Hareket ve Yön Erişimi’ni aç, sayfayı yenile.');
   if (!isConfigured()) return joinError('Sunucu ayarı eksik: js/config.js içindeki Supabase bilgilerini doldur.');
@@ -105,7 +99,6 @@ $('#join-form').addEventListener('submit', async (e) => {
   name = n; store.set('dl-name', name);
   const btn = $('#join-btn'); btn.disabled = true; btn.firstChild.textContent = 'BAĞLANIYOR';
   keepAwake();
-  if (params.get('oda') !== room) history.replaceState(null, '', `?oda=${room}${TEST ? '&test' : ''}`);
   try {
     await connect();
   } catch (err) {
