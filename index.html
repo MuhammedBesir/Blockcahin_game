@@ -153,6 +153,13 @@
 <button type="button" id="mute-btn" class="mute-btn" aria-label="Sesi kapat">🔊</button>
 <div id="rotate" class="rotate"><div>Telefonu dik tut</div></div>
 <div id="conn" class="conn" hidden>Bağlantı koptu, yeniden bağlanıyor…</div>
+<div id="sensor-warn" class="sensor-warn" hidden role="status">
+  <p><b>Hareket sensörü çalışmıyor.</b> <span id="sensor-warn-text"></span></p>
+  <div class="sensor-warn-actions">
+    <button type="button" id="sensor-retry">Yeniden dene</button>
+    <button type="button" id="sensor-dismiss" aria-label="Kapat">✕</button>
+  </div>
+</div>
 
 <script type="module" src="js/phone.js"></script>
 </body>

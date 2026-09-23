@@ -195,6 +195,18 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .rotate { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: var(--navy); font-family: var(--display); font-size: 22px; text-align: center; padding: 24px; }
 @media (orientation: landscape) and (max-height: 520px) { .rotate { display: flex; } }
 .conn { position: fixed; left: 12px; right: 12px; top: max(env(safe-area-inset-top), 10px); z-index: 40; background: #000; border: 2px solid var(--white); border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: 14px; text-align: center; }
+.sensor-warn {
+  position: fixed; left: 12px; right: 12px; bottom: max(env(safe-area-inset-bottom), 12px); z-index: 45;
+  background: #000; border: 2px solid var(--gold); border-radius: 16px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sensor-warn p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--soft); }
+.sensor-warn p b { color: var(--gold); }
+.sensor-warn-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sensor-warn-actions button { font: inherit; font-weight: 700; border-radius: 10px; border: none; padding: 8px 14px; cursor: pointer; }
+#sensor-retry { background: var(--gold); color: var(--navy); }
+#sensor-dismiss { background: rgba(255,255,255,.12); color: var(--white); padding: 8px 12px; }
+
 
 /* ---------- Genel liderlik ---------- */
 .global-card { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; background: var(--deep); border: 2px solid rgba(79,184,240,.4); border-radius: 22px; padding: 12px 16px; }

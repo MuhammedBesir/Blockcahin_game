@@ -36,6 +36,7 @@ function show(id) {
   document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
   // Oyun ekranı zaten dolu (süre, sıra rozeti, pusula); ses düğmesi orada göze çarpmasın diye gizlenir.
   $('#mute-btn').hidden = id === 's-game';
+  if (id !== 's-game') { clearTimeout(sensorWatchdog); hideSensorWarn(); }
   if (id === 's-game') requestAnimationFrame(layoutMaze);
 }
 
@@ -43,8 +44,33 @@ function show(id) {
 const ori = { beta: 0, gamma: 0, has: false };
 window.addEventListener('deviceorientation', (e) => {
   if (e.beta == null || e.gamma == null) return;
-  ori.beta = e.beta; ori.gamma = e.gamma; ori.has = true;
+  ori.beta = e.beta; ori.gamma = e.gamma;
+  if (!ori.has) { ori.has = true; clearTimeout(sensorWatchdog); hideSensorWarn(); }
 });
+
+// Bazı Android tarayıcılarında izin API'si hiç yok ve hareket verisi de gelmez:
+// site ayarlarında "Hareket sensörleri" kapalıysa hiçbir hata/istek olmadan sessizce
+// çalışmaz. Oyun başladıktan kısa süre sonra hâlâ tek bir olay bile gelmediyse
+// bunu ekranda söyleyip nasıl açılacağını gösteriyoruz.
+let sensorWatchdog = 0, sensorWarnDismissed = false;
+function armSensorWatchdog() {
+  clearTimeout(sensorWatchdog);
+  if (TEST || ori.has || sensorWarnDismissed) return;
+  sensorWatchdog = setTimeout(() => { if (!ori.has) showSensorWarn(); }, 1800);
+}
+function sensorHelpText() {
+  const ua = navigator.userAgent || '';
+  if (!/iphone|ipad|ipod|android/i.test(ua)) return 'Bu oyun telefonla oynanır. Masaüstünde denemek için adrese &test ekleyip ok tuşlarını kullan.';
+  if (/iphone|ipad|ipod/i.test(ua)) return 'Ayarlar › Safari › Hareket ve Yön Erişimi’ni aç, sonra sayfayı yenile.';
+  return 'Adres çubuğundaki kilit/bilgi simgesine dokun, izinlerden “Hareket sensörleri”ni Ver konumuna getir, sonra sayfayı yenile.';
+}
+function showSensorWarn() {
+  $('#sensor-warn-text').textContent = sensorHelpText();
+  $('#sensor-warn').hidden = false;
+}
+function hideSensorWarn() { $('#sensor-warn').hidden = true; }
+$('#sensor-retry').addEventListener('click', () => location.reload());
+$('#sensor-dismiss').addEventListener('click', () => { sensorWarnDismissed = true; clearTimeout(sensorWatchdog); hideSensorWarn(); });
 const keys = new Set();
 window.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow') && S.playing) { keys.add(e.key); e.preventDefault(); } });
 window.addEventListener('keyup', (e) => keys.delete(e.key));
@@ -156,6 +182,7 @@ function startGame() {
   $('#timer').textContent = fmt(0);
   $('#countdown').hidden = false;
   show('s-game');
+  armSensorWatchdog();
 }
 
 function goPlaying() {
