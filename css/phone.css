@@ -142,14 +142,14 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .net { display: flex; flex-direction: column; gap: 2px; align-items: center; }
 .net-time { font-family: var(--display); font-size: clamp(30px, 9.7vw, 38px); line-height: 1.1; }
 .net-detail { font-size: 14px; color: var(--muted); }
-.finish-cards { display: flex; gap: 12px; width: 100%; }
-.rank-card, .stars-card { flex: 1 1 0; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; }
-.rank-card { background: var(--neon); color: var(--navy); box-shadow: 0 6px 0 var(--neon-dark); }
-.rank-card .n { font-family: var(--display); font-size: 40px; line-height: 1; }
+.finish-cards { display: flex; gap: 8px; width: 100%; }
+.rank-card, .stars-card, .coins-card { flex: 1 1 0; min-width: 0; border-radius: 18px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; text-align: center; }
+.rank-card { background: var(--neon); color: var(--navy); box-shadow: 0 5px 0 var(--neon-dark); }
+.rank-card .n { font-family: var(--display); font-size: 36px; line-height: 1; }
 .stars-card { background: var(--deep); border: 2px solid rgba(79,184,240,.4); justify-content: center; }
-.stars-card .star-icon { width: 22px; height: 22px; }
-.coins-card { flex: 1 1 0; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; background: rgba(247,147,26,.15); border: 2px solid rgba(247,147,26,.5); justify-content: center; }
-.coins-card .n { font-family: var(--display); font-size: 36px; line-height: 1; color: #F7931A; }
+.stars-card .star-icon { width: 18px; height: 18px; }
+.coins-card { background: rgba(247,147,26,.12); border: 2px solid rgba(247,147,26,.45); justify-content: center; }
+.coins-card .n { font-family: var(--display); font-size: 32px; line-height: 1; color: #F7931A; }
 .finish-foot { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .finish-foot p { margin: 0; font-size: 15px; color: var(--soft); }
 .finish-foot .bar { height: 8px; border-radius: 999px; background: rgba(79,184,240,.2); overflow: hidden; }
