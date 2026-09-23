@@ -242,8 +242,6 @@ function finish(now) {
   $('#finish-detail').textContent = stars
     ? `${fmtSec(raw)} sn − ${fmtSec(stars * GAME.starBonusMs)} sn yıldız bonusu`
     : `${fmtSec(raw)} sn · yıldız bonusu yok`;
-  renderStars($('#finish-stars'), stars, 22, false);
-  $('#finish-stars-sub').textContent = `${stars}/${GAME.stars} yıldız`;
   $('#finish-coins').textContent = coinTotal;
   $('#finish-coins-sub').textContent = `coin toplandı`;
   $('#finish-rank').textContent = '–';

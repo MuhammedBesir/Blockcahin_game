@@ -147,7 +147,6 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .rank-card { background: var(--neon); color: var(--navy); box-shadow: 0 5px 0 var(--neon-dark); }
 .rank-card .n { font-family: var(--display); font-size: 36px; line-height: 1; }
 .stars-card { background: var(--deep); border: 2px solid rgba(79,184,240,.4); justify-content: center; }
-.stars-card .star-icon { width: 18px; height: 18px; }
 .coins-card { background: rgba(247,147,26,.12); border: 2px solid rgba(247,147,26,.45); justify-content: center; }
 .coins-card .n { font-family: var(--display); font-size: 32px; line-height: 1; color: #F7931A; }
 .finish-foot { width: 100%; display: flex; flex-direction: column; gap: 10px; }
