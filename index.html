@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0B1E3F">
+<title>Denge Labirenti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/phone.css">
+</head>
+<body>
+<div class="dots"></div>
+
+<!-- 1 · Katılım -->
+<section id="s-join" class="screen active" aria-labelledby="join-title">
+  <div class="glow-orb"></div>
+  <div class="join-top">
+    <div class="chip" id="room-chip">ODA ----</div>
+    <div class="club">ESTÜ BlockChain</div>
+  </div>
+  <div class="hero">
+    <svg class="logo" width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+      <rect x="4" y="4" width="84" height="84" rx="22" fill="#081733" stroke="#4FB8F0" stroke-width="3"/>
+      <path d="M22 22H58M22 22V46M40 36V70M58 36H70V58M22 58V70H40M58 58V70" transform="translate(1 3)" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+      <path d="M22 22H58M22 22V46M40 36V70M58 36H70V58M22 58V70H40M58 58V70" fill="none" stroke="#4FB8F0" stroke-width="5" stroke-linecap="round"/>
+      <g class="roll"><circle cx="31" cy="30" r="6" fill="#fff"/><circle cx="29" cy="28" r="2" fill="#4FB8F0"/></g>
+    </svg>
+    <h1 id="join-title"><span class="t1">DENGE</span><span class="t2">LABİRENTİ</span></h1>
+    <p class="tagline">Eğ, yuvarla, bitişe ilk sen var.</p>
+  </div>
+  <div class="howto">
+    <div class="tile"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect x="9" y="4" width="14" height="24" rx="3" transform="rotate(-18 16 16)" fill="none" stroke="#4FB8F0" stroke-width="2.5"/><path d="M4 26c3 2 7 3 11 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg><b>Eğ</b><span>Telefonu eğ, top yuvarlansın.</span></div>
+    <div class="tile"><svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,1 14.8,8.15 22.46,8.6 16.54,13.48 18.47,20.9 12,16.77 5.53,20.9 7.46,13.48 1.54,8.6 9.2,8.15" fill="#FFC94D" stroke="#000"/></svg><b>Topla</b><span>Her yıldız −1 sn bonus.</span></div>
+    <div class="tile"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="#4FB8F0" stroke-width="2" stroke-dasharray="3 3"/><circle cx="16" cy="16" r="9" fill="#000"/></svg><b>Kaçın</b><span>Deliğe düşen başa döner.</span></div>
+  </div>
+  <div class="spacer"></div>
+  <form id="join-form" class="join-form" novalidate>
+    <div class="field" id="room-field" hidden>
+      <label for="room-input">ODA KODU</label>
+      <input id="room-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="Projeksiyondaki 4 haneli kod">
+    </div>
+    <div class="field">
+      <label for="name-input">OYUNCU ADIN</label>
+      <input id="name-input" type="text" maxlength="12" autocomplete="nickname" enterkeyhint="go" placeholder="Takma adını yaz">
+      <small>En fazla 12 karakter · adın projeksiyonda görünecek</small>
+    </div>
+    <div class="note" id="join-note">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#4FB8F0" stroke-width="2"/><path d="M14 8v7M14 19v1" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <p id="join-msg">Katıl’a basınca telefon hareket sensörü izni isteyecek. <b>İzin ver</b>, yoksa top hareket etmez.</p>
+    </div>
+    <button type="submit" id="join-btn" class="cta">KATIL<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M5 13h15M14 6l7 7-7 7" fill="none" stroke="#0B1E3F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </form>
+</section>
+
+<!-- Bekleme -->
+<section id="s-wait" class="screen" aria-live="polite">
+  <div class="wait-box">
+    <div class="wait-ball"><span></span></div>
+    <h2 id="wait-title">Hazırsın</h2>
+    <p id="wait-text">Tur başlayınca labirent ekranına geçeceksin.</p>
+    <div class="wait-tip">Telefonu rahat tuttuğun açıda tut. Tur başlarken o açı “düz” kabul edilir.</div>
+  </div>
+</section>
+
+<!-- 2 · Oyun -->
+<section id="s-game" class="screen">
+  <div class="hud">
+    <div class="timer-card">
+      <div class="label">SÜRE</div>
+      <div class="timer num" id="timer">00:00,00</div>
+    </div>
+    <div class="rank-badge" id="rank-badge">
+      <div class="rank-circle" id="rank-num">–</div>
+      <div class="rank-text">
+        <div class="small">Şu an<svg id="rank-up" hidden width="11" height="11" viewBox="0 0 12 12" aria-label="Yükseldin"><path d="M6 2l4 6H2z" fill="#0B1E3F"/></svg></div>
+        <div class="big" id="rank-line">sıra bekleniyor</div>
+      </div>
+    </div>
+  </div>
+  <div class="substats">
+    <div class="stars" id="hud-stars" aria-label="Toplanan yıldız"></div>
+    <div class="meta"><span class="falls"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#000" stroke="#4FB8F0" stroke-width="1.5"/></svg><span id="hud-falls">0 düşme</span></span><span id="hud-name"></span></div>
+  </div>
+  <div class="maze-card" id="maze-card">
+    <canvas id="maze-canvas" aria-label="Labirent"></canvas>
+    <div class="countdown" id="countdown" hidden><span id="countdown-num">3</span><small>Telefonu şimdiki açıda sabit tut</small></div>
+  </div>
+  <div class="gauge-row">
+    <canvas id="gauge" width="132" height="132" aria-hidden="true"></canvas>
+    <div class="gauge-info">
+      <div class="label">EĞİM</div>
+      <div class="gx" id="tilt-x">DÜZ</div>
+      <div class="gy" id="tilt-y">&nbsp;</div>
+      <p>Dokunmana gerek yok, sadece eğ. Düz tutarsan top durur.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · Bitirdin -->
+<section id="s-finish" class="screen">
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="finish-glow"></div>
+  <div class="finish-inner">
+    <div class="chip" id="finish-chip">TUR 1 · BİTİŞ</div>
+    <div class="flag-wrap">
+      <svg class="rays" width="220" height="220" viewBox="0 0 220 220" aria-hidden="true"><g fill="rgba(79,184,240,0.22)" id="rays"></g></svg>
+      <svg class="flag" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
+        <defs><pattern id="chk2" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#fff"/><rect width="10" height="10" fill="#05080F"/><rect x="10" y="10" width="10" height="10" fill="#05080F"/></pattern></defs>
+        <circle cx="75" cy="75" r="70" fill="#081733" stroke="#4FB8F0" stroke-width="4"/>
+        <line x1="48" y1="120" x2="48" y2="34" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+        <path d="M51 36C68 26 86 46 108 34V80C86 92 68 72 51 82Z" transform="translate(3 5)" fill="#000" opacity=".5"/>
+        <path d="M51 36C68 26 86 46 108 34V80C86 92 68 72 51 82Z" fill="url(#chk2)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2 class="done-title">BİTİRDİN!</h2>
+    <div class="net">
+      <div class="label">NET SÜRE</div>
+      <div class="net-time num" id="finish-net">00:00,00</div>
+      <div class="net-detail" id="finish-detail"></div>
+    </div>
+    <div class="finish-cards">
+      <div class="rank-card"><div class="n" id="finish-rank">–</div><div id="finish-rank-sub">sıra hesaplanıyor</div></div>
+      <div class="stars-card"><div class="stars" id="finish-stars"></div><div id="finish-stars-sub">0/5 yıldız</div></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="finish-foot">
+      <p>Diğerleri hâlâ yarışıyor, sıralamayı projeksiyondan izle.</p>
+      <div class="bar"><span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · Tur sonu -->
+<section id="s-results" class="screen">
+  <div class="res-top"><div class="chip" id="res-chip">TUR 1 / 3</div><div class="me-name" id="res-name"></div></div>
+  <h2 class="res-title" id="res-title">TUR SONU</h2>
+  <div class="res-card">
+    <div class="res-rank"><div class="n" id="res-rank">–</div><div><div class="of" id="res-of"></div><div class="note2" id="res-note"></div></div></div>
+    <div class="rule"></div>
+    <dl class="breakdown" id="res-breakdown"></dl>
+  </div>
+  <div class="top5">
+    <div class="label">İLK 5</div>
+    <ol id="res-top"></ol>
+  </div>
+  <div class="spacer"></div>
+  <div class="next" id="res-next">
+    <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="30" fill="none" stroke="rgba(79,184,240,.2)" stroke-width="6"/><circle id="next-ring" cx="34" cy="34" r="30" transform="rotate(-90 34 34)" fill="none" stroke="#4FB8F0" stroke-width="6" stroke-linecap="round" stroke-dasharray="188.5 188.5"/><text id="next-num" x="34" y="41" text-anchor="middle" font-family="Rubik Mono One, sans-serif" font-size="20" fill="#fff">15</text></svg>
+    <div><div class="label" id="next-label">SONRAKİ TUR</div><p id="next-text">Telefonu düz tut, başlarken eğim sıfırlanacak.</p></div>
+  </div>
+</section>
+
+<div id="rotate" class="rotate"><div>Telefonu dik tut</div></div>
+<div id="conn" class="conn" hidden>Bağlantı koptu, yeniden bağlanıyor…</div>
+
+<script type="module" src="js/phone.js"></script>
+</body>
+</html>

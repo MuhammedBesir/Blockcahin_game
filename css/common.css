@@ -1,0 +1,43 @@
+:root {
+  --navy: #0B1E3F;
+  --deep: #081733;
+  --deeper: #061129;
+  --neon: #4FB8F0;
+  --neon-dark: #1C5F95;
+  --white: #FFFFFF;
+  --ink: #05080F;
+  --gold: #FFC94D;
+  --muted: #A9C6E6;
+  --soft: #DCEBFA;
+  --display: 'Rubik Mono One', 'Arial Black', sans-serif;
+  --body: 'Space Grotesk', system-ui, sans-serif;
+  --pixel: 'Silkscreen', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--navy); color: var(--white); font-family: var(--body); }
+body { -webkit-font-smoothing: antialiased; }
+button { font: inherit; }
+:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
+
+.dots {
+  position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(79, 184, 240, 0.18) 1.2px, transparent 1.6px);
+  background-size: 18px 18px;
+}
+
+.chip {
+  font-family: var(--pixel); letter-spacing: 1px; color: var(--neon);
+  border: 2px solid var(--neon); border-radius: 999px; padding: 6px 14px; font-size: 14px;
+}
+
+.star-icon { width: 20px; height: 20px; }
+.star-icon.on polygon { fill: var(--gold); }
+.star-icon.off polygon { fill: none; stroke: #6F93BD; stroke-width: 1.6; }
+
+.num { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

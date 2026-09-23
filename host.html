@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Denge Labirenti — Projeksiyon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/host.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="dots-lg"></div>
+  <header class="top">
+    <div class="brand">
+      <svg width="88" height="88" viewBox="0 0 92 92" aria-hidden="true">
+        <rect x="4" y="4" width="84" height="84" rx="22" fill="#081733" stroke="#4FB8F0" stroke-width="3"/>
+        <path d="M22 22H58M22 22V46M40 36V70M58 36H70V58M22 58V70H40M58 58V70" transform="translate(1 3)" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+        <path d="M22 22H58M22 22V46M40 36V70M58 36H70V58M22 58V70H40M58 58V70" fill="none" stroke="#4FB8F0" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="31" cy="30" r="6" fill="#fff"/>
+      </svg>
+      <div>
+        <h1>DENGE <span>LABİRENTİ</span></h1>
+        <div class="sub">ESTÜ BlockChain · Oryantasyon</div>
+      </div>
+    </div>
+    <div class="center">
+      <div class="round-pill" id="round-pill">HAZIRLIK</div>
+      <div class="clock">
+        <div class="clock-label" id="clock-label">OYUNCULAR BEKLENİYOR</div>
+        <div class="clock-value num" id="clock-value">--:--</div>
+      </div>
+    </div>
+    <div class="counts">
+      <div class="count"><b id="c-players">0</b><span>oyuncu</span></div>
+      <div class="count"><b id="c-done" class="neon">0</b><span>bitirdi</span></div>
+    </div>
+  </header>
+
+  <main class="body">
+    <section class="field" aria-label="Oyuncuların labirentleri">
+      <div class="field-head">
+        <h2>SAHA</h2>
+        <div class="legend">
+          <span><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="#4FB8F0" stroke="#fff" stroke-width="2"/></svg>oyuncu</span>
+          <span><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="#000" stroke="#4FB8F0" stroke-width="2" stroke-dasharray="3 2"/></svg>tuzak</span>
+          <span><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" rx="3" fill="#fff"/><rect x="2" y="2" width="9" height="9" fill="#05080F"/><rect x="11" y="11" width="9" height="9" fill="#05080F"/></svg>bitiş</span>
+          <span class="more" id="more" hidden></span>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="grid-empty" id="grid-empty">
+        <p>Telefonunla QR’ı okut, adını yaz, katıl.</p>
+        <p class="dim">Katılan herkesin labirenti burada canlı görünecek.</p>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="board" aria-label="İlk 10">
+        <div class="board-head">
+          <h2 id="board-title">İLK 10</h2>
+          <div class="live" id="live"><span></span>CANLI</div>
+        </div>
+        <div class="rows" id="rows"></div>
+        <p class="board-empty" id="board-empty">Tur başlayınca sıralama burada canlı akacak.</p>
+      </section>
+      <section class="join">
+        <div class="qr" id="qr" aria-label="Katılım QR kodu"></div>
+        <div class="join-text">
+          <div class="join-title">KATIL!</div>
+          <div class="join-url" id="join-url"></div>
+          <div class="join-room" id="join-room">ODA ----</div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <div class="big-count" id="big-count" hidden><span id="big-count-num">3</span></div>
+  <div class="winner" id="winner" hidden></div>
+</div>
+
+<div class="controls" id="controls">
+  <button type="button" id="btn-start" class="primary">Turu başlat <kbd>S</kbd></button>
+  <button type="button" id="btn-end">Turu bitir <kbd>E</kbd></button>
+  <button type="button" id="btn-reset">Oyunu sıfırla</button>
+  <button type="button" id="btn-full">Tam ekran <kbd>F</kbd></button>
+  <span class="ctrl-note" id="ctrl-note"></span>
+</div>
+<div class="setup-error" id="setup-error" hidden></div>
+
+<script type="module" src="js/host.js"></script>
+</body>
+</html>
