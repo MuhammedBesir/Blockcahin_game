@@ -28,7 +28,7 @@ function render(rows, me) {
     const li = document.createElement('li');
     if (r.rank <= 3) li.classList.add(`top${r.rank}`);
     if (r.pid === pid) li.classList.add('mine');
-    li.innerHTML = `<span class="r">${r.rank}</span>${r.rank === 1 ? crown : ''}<span class="nm"><b></b><small>${r.runs} tur · ${r.stars} yıldız</small></span><span class="t">${fmtSec(r.net_ms)}</span>`;
+    li.innerHTML = `<span class="r">${r.rank}</span>${r.rank === 1 ? crown : ''}<span class="nm"><b></b><small>${r.runs} tur</small></span><span class="t">${fmtSec(r.net_ms)}</span>`;
     li.querySelector('b').textContent = r.name;
     if (r.pid === pid) li.querySelector('b').insertAdjacentHTML('beforeend', '<span class="you">SEN</span>');
     ol.appendChild(li);

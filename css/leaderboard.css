@@ -28,3 +28,6 @@ body { min-height: 100%; height: auto; }
 .list .t { font-family: var(--display); font-size: 18px; font-variant-numeric: tabular-nums; }
 .empty { margin: 0; color: var(--muted); text-align: center; padding: 24px 0; }
 .foot { margin: 0; font-size: 13px; color: var(--muted); text-align: center; }
+
+.play-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px 24px; border-radius: 999px; background: var(--neon); color: var(--navy); font-family: var(--pixel); font-size: 16px; font-weight: 700; letter-spacing: 1px; text-decoration: none; box-shadow: 0 6px 0 var(--neon-dark); transition: transform .12s, box-shadow .12s; }
+.play-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--neon-dark); }
