@@ -113,6 +113,28 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 const nameInput = $('#name-input');
 nameInput.value = name;
 
+const crownSmall = '<svg width="16" height="13" viewBox="0 0 28 22" aria-label="Lider"><path d="M3 18L5 6L10.5 11L14 3L17.5 11L23 6L25 18Z" fill="#FFC94D" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><rect x="3" y="18" width="22" height="3" rx="1" fill="#FFC94D"/></svg>';
+async function loadJoinLeaderboard() {
+  if (!isConfigured()) return;
+  try {
+    const rows = await fetchLeaderboard(5);
+    if (!rows.length) return;
+    const ol = $('#join-lb-list');
+    ol.innerHTML = '';
+    for (const r of rows) {
+      const li = document.createElement('li');
+      if (r.rank === 1) li.classList.add('top1');
+      if (r.pid === pid) li.classList.add('me');
+      li.innerHTML = `<span class="r">${r.rank}</span>${r.rank === 1 ? crownSmall : ''}<span class="nm"></span><span class="t">${(r.net_ms / 1000).toFixed(2).replace('.', ',')} sn</span>`;
+      li.querySelector('.nm').textContent = r.name;
+      if (r.pid === pid) li.querySelector('.nm').insertAdjacentHTML('beforeend', '<span class="you">SEN</span>');
+      ol.appendChild(li);
+    }
+    $('#join-lb').hidden = false;
+  } catch {}
+}
+loadJoinLeaderboard();
+
 // ---------- Ses ----------
 const muteBtn = $('#mute-btn');
 function updateMuteBtn() {

@@ -43,6 +43,18 @@ input { -webkit-user-select: text; user-select: text; touch-action: manipulation
 .tile b { font-size: 15px; }
 .tile span { font-size: 12px; line-height: 1.3; color: var(--muted); }
 
+.join-lb { display: flex; flex-direction: column; gap: 8px; }
+.join-lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.join-lb-list li { display: flex; align-items: center; gap: 10px; background: var(--deep); border: 2px solid rgba(79,184,240,.25); border-radius: 14px; padding: 8px 12px; }
+.join-lb-list li.top1 { border-color: var(--gold); background: rgba(255,201,77,.08); }
+.join-lb-list li.me { outline: 2px solid var(--white); outline-offset: 1px; }
+.join-lb-list .r { width: 28px; flex-shrink: 0; font-family: var(--display); font-size: 16px; color: var(--muted); }
+.join-lb-list .top1 .r { color: var(--gold); }
+.join-lb-list .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.join-lb-list .you { background: var(--white); color: var(--navy); font-family: var(--pixel); font-size: 9px; padding: 1px 5px; border-radius: 999px; margin-left: 4px; vertical-align: middle; }
+.join-lb-list .t { font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums; }
+.join-lb .lb-link { align-self: center; font-size: 13px; padding: 4px 8px; }
+
 .join-form { display: flex; flex-direction: column; gap: 14px; position: relative; }
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field label { font-family: var(--pixel); font-size: 14px; letter-spacing: 1px; color: var(--neon); }
